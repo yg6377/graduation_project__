@@ -21,7 +21,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => LoginScreen(),
         '/signup': (context) => SignUpScreen(),
-        '/home': (context) => HomeScreen(),
+        '/home': (context) => HomeScreen(), //수정완료했다
       },
     );
   }
