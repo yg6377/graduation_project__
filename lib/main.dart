@@ -21,7 +21,9 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => LoginScreen(),
         '/signup': (context) => SignUpScreen(),
-        '/home': (context) => HomeScreen(), //수정완료했다
+        '/home': (context) => HomeScreen(),
+        '/chat': (context) => ChatScreen(),         // 채팅 화면
+        '/mypage': (context) => MyPageScreen(),     // 마이페이지 화면
       },
     );
   }
