@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+void fetchData() async {
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+  var snapshot = await firestore.collection('users').get();
+  for (var doc in snapshot.docs) {
+    print(doc.data());
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -20,13 +27,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
                   itemBuilder: (context, index) {
 
                             ),
-                        ),
-                      ),
-                    );
+                        )
                   },
                 );
               },
       ),
-    );
+
   }
 }

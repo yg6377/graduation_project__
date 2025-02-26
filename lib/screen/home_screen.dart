@@ -3,6 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:graduation_project_1/screen/mypage_screen.dart';
 
+import 'package:graduation_project_1/screen/chatlist_screen.dart';
+
+import 'productlist_screen.dart';
+import 'package:graduation_project_1/screen/productlist_screen.dart';
+
 
 
 class HomeScreen extends StatefulWidget {
@@ -17,9 +22,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // 네비게이션 탭 화면
   final List<Widget> _pages = [
-    ProductListScreen(),  // 홈 화면
-    ChatScreen(),         // 채팅 화면
-    MyPageScreen(),       // 마이페이지 화면
+    ProductListScreen(), // 홈 화면
+    //ChatScreen(), // 채팅 화면
+    MyPageScreen(), // 마이페이지 화면
   ];
 
   void _onItemTapped(int index) {
@@ -33,6 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.pushReplacementNamed(context, '/login'); // 로그인 화면으로 이동
     return false; // 뒤로가기 액션 취소
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +54,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: TextField(
                   decoration: InputDecoration(
                     hintText: '현재지역(EX.송도동)',
-                    contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    contentPadding: EdgeInsets.symmetric(
+                        vertical: 8, horizontal: 12),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -95,128 +102,27 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Home'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              Navigator.pushReplacementNamed(context, '/login'); // 로그인 화면으로 이동
-            },
-          )
-        ],
-      ),
-      body: Center(
-        child: Text(
-          'Welcome to Home Screen!',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-  }
-}
 
 // 홈 화면의 상품 목록 화면
-class ProductListScreen extends StatelessWidget {
-  const ProductListScreen({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('product').snapshots(), // Firestore 실시간 데이터 가져오기
-    builder: (context, snapshot) {
-    if (!snapshot.hasData) {
-    return Center(child: CircularProgressIndicator()); // 로딩 표시
-    }
-
-    var products = snapshot.data!.docs; // Firestore에서 가져온 문서 리스트
-
-    return ListView.builder(
-      itemCount: products.length,
-      itemBuilder: (context, index) {
-        var product = products[index];
-        var productData = product.data() as Map<String, dynamic>;
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 상품 이미지
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Image.network(
-                    productData['image'] ?? 'https://via.placeholder.com/150',
-                    width: 100,
-                    height: 100,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        Icon(Icons.image_not_supported, size: 100),
-                  ),
-                ),
-                // 제목과 가격
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          productData['title'] ?? '상품명 없음',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          productData['price'] ?? '가격 없음',
-                          style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-    },
-    );
-  }
-}
 
 // 채팅 화면
-class ChatScreen extends StatelessWidget {
+/*class ChatScreen extends StatelessWidget {
   const ChatScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        '채팅 화면입니다.',
-        style: TextStyle(fontSize: 24),
-      ),
-    );
+  return Center(
+  child: Text(
+  '채팅 화면입니다.',
+  style: TextStyle(fontSize: 24),
+  ),
+  );
   }
-}
+  }*/
 
 // 마이페이지 화면
-class MyPageScreen extends StatelessWidget {
+/*class MyPageScreen extends StatelessWidget {
   const MyPageScreen({super.key});
 
   @override
@@ -228,4 +134,6 @@ class MyPageScreen extends StatelessWidget {
       ),
     );
   }
+}*/
+
 }
