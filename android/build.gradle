@@ -16,3 +16,14 @@ subprojects {
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.2.1'
+    } //호환성 문제 때문에 7.4.2 추가 // ./gradlew clean 실행 안되서 다시 8.2.1로 변경
+}
+
