@@ -5,7 +5,7 @@ import 'package:graduation_project_1/screen/signup_screen.dart';
 import 'package:graduation_project_1/screen/mypage_screen.dart';
 import 'firebase_options.dart';
 import 'package:flutter/material.dart';
-//커밋용
+//커밋용9
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
