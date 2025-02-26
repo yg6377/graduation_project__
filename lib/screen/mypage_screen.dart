@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class MyPageScreen extends StatefulWidget {
-  const MyPageScreen({super.key}); //33
 
   @override
   State<MyPageScreen> createState() => _MyPageScreenState();
