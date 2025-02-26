@@ -2,19 +2,14 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:graduation_project_1/screen/home_screen.dart';
 import 'package:graduation_project_1/screen/login_screen.dart';
 import 'package:graduation_project_1/screen/signup_screen.dart';
-import 'package:graduation_project_1/screen/mypage_screen.dart';
 import 'firebase_options.dart';
 import 'package:flutter/material.dart';
-//커밋용9
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  runApp(const MyApp());
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  runApp(MyApp());
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -27,8 +22,6 @@ class MyApp extends StatelessWidget {
         '/login': (context) => LoginScreen(),
         '/signup': (context) => SignUpScreen(),
         '/home': (context) => HomeScreen(),
-        '/chat': (context) => ChatScreen(),         // 채팅 화면
-        '/mypage': (context) => MyPageScreen(),     // 마이페이지 화면
       },
     );
   }
