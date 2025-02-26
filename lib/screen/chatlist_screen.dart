@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class ChatRoomScreen extends StatefulWidget {
   final String chatRoomId; // 채팅방 ID
-  final String userName; // 대화 상대 이름
+  final String userName; // 대화 상대 이름 123
 
   const ChatRoomScreen({
     super.key,
