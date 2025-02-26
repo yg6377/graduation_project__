@@ -60,17 +60,21 @@ class _LoginScreenState extends State<LoginScreen> {
               onPressed: login,
               child: Text('Login btn'),
             ),
-            const SizedBox(height: 10), // 버튼 간격 추가
+
+
             ElevatedButton(
-              onPressed: autoLogin,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-              child: const Text('Auto Login', style: TextStyle(color: Colors.white)),
-            ),
-            TextButton(
               onPressed: () {
                 Navigator.pushNamed(context, '/signup');
               },
               child: Text('Sign Up'),
+            ),
+
+            const SizedBox(height: 10), // 버튼 간격 추가
+
+            ElevatedButton(
+              onPressed: autoLogin,
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+              child: const Text('Auto Login(임시)', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
