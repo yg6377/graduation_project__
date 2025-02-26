@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+
 class ChatRoomScreen extends StatefulWidget {
   final String chatRoomId; // 채팅방 ID
   final String userName; // 대화 상대 이름
@@ -135,5 +136,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     );
   }
 }
+
+
 
 

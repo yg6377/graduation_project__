@@ -26,6 +26,18 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// 자동 로그인 (이전에 로그인한 계정 사용)
+  Future<void> autoLogin() async {
+    final user = FirebaseAuth.instance.currentUser; //
+    if (user != null) {
+      Navigator.pushReplacementNamed(context, '/home');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('자동 로그인 불가능. 먼저 로그인하세요!')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -46,7 +58,13 @@ class _LoginScreenState extends State<LoginScreen> {
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: login,
-              child: Text('Login'),
+              child: Text('Login btn'),
+            ),
+            const SizedBox(height: 10), // 버튼 간격 추가
+            ElevatedButton(
+              onPressed: autoLogin,
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              child: const Text('Auto Login', style: TextStyle(color: Colors.white)),
             ),
             TextButton(
               onPressed: () {
