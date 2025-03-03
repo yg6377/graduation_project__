@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class MyPageScreen extends StatefulWidget {
+  const MyPageScreen({Key? key}) : super(key: key);
 
   @override
   State<MyPageScreen> createState() => _MyPageScreenState();
@@ -25,7 +26,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
     if (newNickname.isNotEmpty) {
       await _currentUser?.updateDisplayName(newNickname);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('닉네임이 수정되었습니다.')),
+        const SnackBar(content: Text('닉네임이 수정되었습니다.')),
       );
       setState(() {});
     }
@@ -43,27 +44,27 @@ class _MyPageScreenState extends State<MyPageScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('마이페이지'),
+        title: const Text('마이페이지'),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             // 프로필 섹션
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
                   // 프로필 이미지
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 50,
                     backgroundImage: NetworkImage(
                       'https://via.placeholder.com/150', // 임시 프로필 이미지
                     ),
                   ),
-                  SizedBox(width: 16),
+                  const SizedBox(width: 16),
                   // 닉네임 수정
                   Expanded(
                     child: Column(
@@ -71,15 +72,15 @@ class _MyPageScreenState extends State<MyPageScreen> {
                       children: [
                         TextField(
                           controller: _nicknameController,
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             labelText: '닉네임 (수정 가능)',
                             border: OutlineInputBorder(),
                           ),
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         ElevatedButton(
                           onPressed: _updateNickname,
-                          child: Text('닉네임 수정'),
+                          child: const Text('닉네임 수정'),
                         ),
                       ],
                     ),
@@ -87,29 +88,29 @@ class _MyPageScreenState extends State<MyPageScreen> {
                 ],
               ),
             ),
-            SizedBox(height: 20),
-            Divider(thickness: 2),
+            const SizedBox(height: 20),
+            const Divider(thickness: 2),
             // 좋아요 목록 제목
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 "'좋아요' 목록",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             // 좋아요 누른 상품 리스트
             StreamBuilder<QuerySnapshot>(
               stream: _getLikedProducts(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator());
                 }
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Center(
+                  return const Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: EdgeInsets.all(16.0),
                       child: Text('좋아요를 누른 게시글이 없습니다.'),
                     ),
                   );
@@ -119,12 +120,13 @@ class _MyPageScreenState extends State<MyPageScreen> {
 
                 return ListView.builder(
                   shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(), // 내부 스크롤 비활성화
+                  physics: const NeverScrollableScrollPhysics(),
                   itemCount: likedProducts.length,
                   itemBuilder: (context, index) {
                     final product = likedProducts[index];
                     return Card(
-                      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      margin:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       elevation: 2,
                       child: Row(
                         children: [
@@ -143,7 +145,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
                               ),
                             ),
                           ),
-                          SizedBox(width: 12),
+                          const SizedBox(width: 12),
                           // 상품 정보
                           Expanded(
                             child: Column(
@@ -151,17 +153,17 @@ class _MyPageScreenState extends State<MyPageScreen> {
                               children: [
                                 Text(
                                   product['title'] ?? '제목 없음',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold),
                                 ),
-                                SizedBox(height: 4),
+                                const SizedBox(height: 4),
                                 Text(
                                   product['price'] ?? '가격 정보 없음',
                                   style: TextStyle(
                                       fontSize: 14, color: Colors.grey[700]),
                                 ),
-                                SizedBox(height: 4),
+                                const SizedBox(height: 4),
                                 Text(
                                   '(내가 좋아요 누른 상품)',
                                   style: TextStyle(
