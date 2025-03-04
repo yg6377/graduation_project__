@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:graduation_project_1/screen/chatlist_Screen.dart';
 import 'package:graduation_project_1/screen/mypage_screen.dart';
 //0304 push
 
@@ -18,7 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // 네비게이션 탭 화면
   final List<Widget> _pages = [
     ProductListScreen(),  // 홈 화면
-    ChatScreen(),         // 채팅 화면
+    ChatListScreen(),         // 채팅 화면
     MyPageScreen(),       // 마이페이지 화면
   ];
 
@@ -171,7 +172,7 @@ class ProductListScreen extends StatelessWidget {
   }
 }
 
-// 채팅 화면
+/*채팅 화면
 class ChatScreen extends StatelessWidget {
   const ChatScreen({super.key});
 
@@ -184,7 +185,7 @@ class ChatScreen extends StatelessWidget {
       ),
     );
   }
-}
+}*/
 
 /*마이페이지 화면
 class MyPageScreen extends StatelessWidget {
