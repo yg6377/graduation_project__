@@ -1,2 +1,0 @@
-/Users/jung-yungeol/StudioProjects/graduation_project_1/android/app/.cxx/RelWithDebInfo/1p576d2w/x86_64/CMakeFiles/edit_cache.dir
-/Users/jung-yungeol/StudioProjects/graduation_project_1/android/app/.cxx/RelWithDebInfo/1p576d2w/x86_64/CMakeFiles/rebuild_cache.dir
