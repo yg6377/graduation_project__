@@ -42,43 +42,15 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: false, // 기본 뒤로가기 버튼 제거
-          title: Row(
-            children: [
-              // 검색창
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: '현재지역(EX.송도동)',
-                    contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: () {
-                  // 검색 기능 구현
-                },
-                child: Text('검색'),
-              ),
-            ],
-          ),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back),
-            onPressed: () {
-              Navigator.pushReplacementNamed(context, '/login'); // 로그인 화면으로 이동
-            },
-          ),
+          title: Text('Location Name'),
           actions: [
             IconButton(
-              icon: Icon(Icons.logout),
-              onPressed: () async {
-                await FirebaseAuth.instance.signOut(); // 로그아웃
-                Navigator.pushReplacementNamed(context, '/login');
+              icon: Icon(Icons.search),
+              onPressed: () {
+                Navigator.pushNamed(context, '/search'); //
               },
             ),
+            IconButton(icon: Icon(Icons.notifications), onPressed: () {}),
           ],
         ),
         body: _pages[_selectedIndex],
