@@ -1,8 +1,10 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+// 숫자 입력만 가능하게 하기 위해 추가
+import 'package:flutter/services.dart';
 
 class ProductUploadScreen extends StatefulWidget {
   @override
@@ -10,14 +12,16 @@ class ProductUploadScreen extends StatefulWidget {
 }
 
 class _ProductUploadScreenState extends State<ProductUploadScreen> {
+  final TextEditingController titleController = TextEditingController();
+  final TextEditingController priceController = TextEditingController();
+  final TextEditingController descriptionController = TextEditingController();
+  String selectedCondition = '새 제품';
   File? _image;
-  final picker = ImagePicker();
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _priceController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
 
-  // 갤러리에서 이미지 선택
-  Future pickImage() async {
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+  /// 이미지를 갤러리에서 선택하는 함수
+  Future<void> _pickImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
       setState(() {
@@ -26,90 +30,120 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
     }
   }
 
-  // Firebase Storage에 이미지 업로드 후 URL 가져오기
-  Future<String?> uploadImageToStorage(File imageFile) async {
+  /// 상품 업로드 함수
+  Future<void> _uploadProduct() async {
     try {
-      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
-      Reference storageRef =
-      FirebaseStorage.instance.ref().child('product_images/$fileName.jpg');
+      // 입력값이 없으면 기본값으로 설정
+      String title = titleController.text.isEmpty ? "제목 없음" : titleController.text;
+      // 가격이 입력되지 않았다면 "가격 미정", 입력되었다면 "123 NTD" 형태로 저장
+      String price = priceController.text.isEmpty
+          ? "가격 미정"
+          : "${priceController.text} NTD";
+      String description = descriptionController.text.isEmpty ? "설명 없음" : descriptionController.text;
 
-      UploadTask uploadTask = storageRef.putFile(imageFile);
-      TaskSnapshot snapshot = await uploadTask;
-      return await snapshot.ref.getDownloadURL(); // 업로드된 이미지 URL 반환
+      String imageUrl = ""; // 기본값 (이미지 없을 시 빈 문자열)
+
+      // 이미지를 선택했다면 Firebase Storage에 업로드
+      if (_image != null) {
+        String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+        Reference storageRef = FirebaseStorage.instance.ref().child('product_images/$fileName.jpg');
+        UploadTask uploadTask = storageRef.putFile(_image!);
+        TaskSnapshot snapshot = await uploadTask;
+        imageUrl = await snapshot.ref.getDownloadURL();
+      }
+
+      // Firestore에 문서 추가 (이미지가 없으면 imageUrl은 빈 문자열)
+      await FirebaseFirestore.instance.collection('products').add({
+        'title': title,
+        'price': price,
+        'description': description,
+        'condition': selectedCondition,
+        'imageUrl': imageUrl,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      // 업로드 완료 후 이전 화면(홈 화면 등)으로 복귀
+      Navigator.pop(context);
     } catch (e) {
-      print("이미지 업로드 실패: $e");
-      return null;
+      print("Error uploading product: $e");
     }
-  }
-
-  // Firestore에 상품 데이터 추가
-  Future<void> uploadProduct() async {
-    if (_titleController.text.isEmpty || _priceController.text.isEmpty || _image == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("모든 필드를 입력하고 이미지를 선택해주세요!")),
-      );
-      return;
-    }
-
-    String? imageUrl = await uploadImageToStorage(_image!);
-    if (imageUrl == null) return; // 이미지 업로드 실패 시 종료
-
-    await FirebaseFirestore.instance.collection('product').add({
-      'title': _titleController.text,
-      'price': _priceController.text,
-      'image': imageUrl, // Firestore에 이미지 URL 저장
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("상품이 업로드되었습니다!")),
-    );
-    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("상품 등록")),
+      appBar: AppBar(
+        title: Text('상품 등록'),
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // 이미지 선택 버튼
-            GestureDetector(
-              onTap: pickImage,
-              child: Container(
-                width: 150,
-                height: 150,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(8),
-                ),
+        padding: EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              // 사진 업로드 버튼
+              GestureDetector(
+                onTap: _pickImage,
                 child: _image == null
-                    ? Icon(Icons.add_a_photo, size: 50, color: Colors.grey)
-                    : Image.file(_image!, fit: BoxFit.cover),
+                    ? Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.camera_alt, size: 40, color: Colors.black54),
+                )
+                    : Image.file(_image!, width: 100, height: 100),
               ),
-            ),
-            SizedBox(height: 16),
-            // 제목 입력
-            TextField(
-              controller: _titleController,
-              decoration: InputDecoration(labelText: "상품명"),
-            ),
-            SizedBox(height: 8),
-            // 가격 입력
-            TextField(
-              controller: _priceController,
-              decoration: InputDecoration(labelText: "가격"),
-              keyboardType: TextInputType.number,
-            ),
-            SizedBox(height: 16),
-            // Firestore 업로드 버튼
-            ElevatedButton(
-              onPressed: uploadProduct,
-              child: Text("상품 등록"),
-            ),
-          ],
+              SizedBox(height: 10),
+
+              // 상품명 입력
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(labelText: '상품명'),
+              ),
+
+              // 가격 입력 (숫자 전용, 화폐 단위 NTD 자동으로 붙음)
+              TextField(
+                controller: priceController,
+                decoration: InputDecoration(labelText: '가격 (숫자만 입력)'),
+                keyboardType: TextInputType.number,
+                // 숫자만 입력 가능하도록 제한
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+
+              // 상품 설명 입력
+              TextField(
+                controller: descriptionController,
+                decoration: InputDecoration(labelText: '설명'),
+              ),
+
+              // 상품 상태 선택 (드롭다운)
+              DropdownButton<String>(
+                value: selectedCondition,
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedCondition = newValue!;
+                  });
+                },
+                items: ['새 제품', '중고 - 상', '중고 - 중', '중고 - 하']
+                    .map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+              ),
+
+              SizedBox(height: 20),
+
+              // 업로드 버튼
+              ElevatedButton(
+                onPressed: _uploadProduct,
+                child: Text('업로드'),
+              ),
+            ],
+          ),
         ),
       ),
     );

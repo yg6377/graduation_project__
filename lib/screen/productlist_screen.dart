@@ -1,68 +1,106 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:io';
 
-// 홈 화면의 상품 목록 화면
-class ProductListScreen extends StatelessWidget {
-  const ProductListScreen({super.key});
+class ProductUploadScreen extends StatefulWidget {
+  @override
+  _ProductUploadScreenState createState() => _ProductUploadScreenState();
+}
+
+class _ProductUploadScreenState extends State<ProductUploadScreen> {
+  final TextEditingController titleController = TextEditingController();
+  final TextEditingController priceController = TextEditingController();
+  final TextEditingController descriptionController = TextEditingController();
+  String selectedCondition = '새 제품';
+  File? _image;
+
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
+      });
+    }
+  }
+
+  Future<void> _uploadProduct() async {
+    if (_image == null || titleController.text.isEmpty || priceController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('모든 필드를 입력하고 이미지를 선택하세요!')),
+      );
+      return;
+    }
+
+    try {
+      // Firebase Storage에 이미지 업로드
+      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+      Reference storageRef = FirebaseStorage.instance.ref().child('product_images/$fileName.jpg');
+      UploadTask uploadTask = storageRef.putFile(_image!);
+      TaskSnapshot snapshot = await uploadTask;
+      String imageUrl = await snapshot.ref.getDownloadURL();
+
+      // Firestore에 데이터 저장
+      await FirebaseFirestore.instance.collection('products').add({
+        'title': titleController.text,
+        'price': priceController.text,
+        'description': descriptionController.text,
+        'condition': selectedCondition,
+        'imageUrl': imageUrl,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      // 업로드 완료 후 홈 화면으로 이동
+      Navigator.pop(context);
+    } catch (e) {
+      print("Error uploading product: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // 더미 데이터
-    final List<Map<String, String>> products = [
-      {'title': '아이폰 13', 'price': '800,000원', 'image': 'https://via.placeholder.com/150'},
-      {'title': '맥북 프로', 'price': '1,500,000원', 'image': 'https://via.placeholder.com/150'},
-      {'title': '갤럭시 S21', 'price': '700,000원', 'image': 'https://via.placeholder.com/150'},
-      {'title': '에어팟 프로', 'price': '200,000원', 'image': 'https://via.placeholder.com/150'},
-    ];
-
-    return ListView.builder(
-      itemCount: products.length,
-      itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
+    return Scaffold(
+      appBar: AppBar(title: Text('상품 등록')),
+      body: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            GestureDetector(
+              onTap: _pickImage,
+              child: _image == null
+                  ? Container(
+                width: 100,
+                height: 100,
+                color: Colors.grey[300],
+                child: Icon(Icons.camera_alt, size: 40),
+              )
+                  : Image.file(_image!, width: 100, height: 100),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 이미지
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Image.network(
-                    products[index]['image']!,
-                    width: 100,
-                    height: 100,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                // 제목과 가격
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          products[index]['title']!,
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          products[index]['price']!,
-                          style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+            TextField(controller: titleController, decoration: InputDecoration(labelText: '상품명')),
+            TextField(controller: priceController, decoration: InputDecoration(labelText: '가격'), keyboardType: TextInputType.number),
+            TextField(controller: descriptionController, decoration: InputDecoration(labelText: '설명')),
+            DropdownButton<String>(
+              value: selectedCondition,
+              onChanged: (String? newValue) {
+                setState(() {
+                  selectedCondition = newValue!;
+                });
+              },
+              items: ['새 제품', '중고 - 상', '중고 - 중', '중고 - 하'].map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(value: value, child: Text(value));
+              }).toList(),
             ),
-          ),
-        );
-      },
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _uploadProduct,
+              child: Text('업로드'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
