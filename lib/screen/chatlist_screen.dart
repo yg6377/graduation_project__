@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:graduation_project_1/screen/chatlist_screen.dart';
+
+import 'chatroom_screen.dart';
 
 class ChatListScreen extends StatelessWidget {
   @override
@@ -22,11 +23,42 @@ class ChatListScreen extends StatelessWidget {
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               var chatData = snapshot.data!.docs[index];
+              String chatId = chatData.id;
+              Timestamp? lastTime = chatData['lastTime']; // Firestore Timestamp
+
+              String userName = chatData['userName'] ?? "알 수 없음";
+              String userLocation = chatData['location'] ?? "지역 정보 없음";
+              String profileImageUrl = chatData['profileImageUrl'] ?? "";
+
+
+
               return ListTile(
-                title: Text(chatData['message']), // Firestore에서 채팅 메시지 가져오기
-                subtitle: Text(chatData['sender']), // 보낸 사람 정보
+                leading: CircleAvatar(
+                  backgroundImage: profileImageUrl.isNotEmpty
+                      ? NetworkImage(profileImageUrl)
+                      : AssetImage('assets/default_profile.png') as ImageProvider,
+                  radius: 25,
+                ),
+                title: Text(userName, style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(userLocation, style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    SizedBox(height: 2),
+
+                  ],
+                ),
+
                 onTap: () {
-                  // 채팅방으로 이동 가능하도록 설정 (추가 가능)
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ChatRoomScreen(
+                        chatRoomId: chatId,
+                        userName: userName,
+                      ),
+                    ),
+                  );
                 },
               );
             },
@@ -34,5 +66,4 @@ class ChatListScreen extends StatelessWidget {
         },
       ),
     );
-  }
-}
+  }}
