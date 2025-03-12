@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'chatroom_screen.dart';
+import 'package:intl/intl.dart';
+
 
 class ChatListScreen extends StatelessWidget {
   @override
@@ -30,10 +32,13 @@ class ChatListScreen extends StatelessWidget {
               String userLocation = chatData['location'] ?? "지역 정보 없음";
               String profileImageUrl = chatData['profileImageUrl'] ?? "";
 
+
               String lastMessage = chatData['lastMessage'] ?? "";
+
               String lastTimeString = "";
+
               if (lastTime != null) {
-                // timeago를 쓰려면 pubspec.yaml에 timeago 의존성을 추가해 주세요 (timeago: ^3.0.2 등)
+                // timeago를 쓰려면 pubspec.yaml에 timeago 의존성 추가
                 lastTimeString = timeago.format(lastTime.toDate(), locale: 'ko');
               }
 
@@ -73,3 +78,26 @@ class ChatListScreen extends StatelessWidget {
       ),
     );
   }}
+
+
+  /// 🔥 시간을 "3분 전" 같은 형태로 변환
+  String _formatTime(Timestamp? timestamp) {
+    if (timestamp == null) return "방금 전";
+
+    DateTime dateTime = timestamp.toDate();
+    Duration difference = DateTime.now().difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return "방금 전";
+    } else if (difference.inMinutes < 60) {
+      return "${difference.inMinutes}분 전";
+    } else if (difference.inHours < 24) {
+      return "${difference.inHours}시간 전";
+    } else {
+      return DateFormat('MM/dd HH:mm').format(dateTime);
+    }
+  }
+
+
+
+
