@@ -34,7 +34,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         'timestamp': FieldValue.serverTimestamp(),
       });
       await FirebaseFirestore.instance
-          .collection('chats')
+          .collection('chatRooms')
           .doc(widget.chatRoomId)
           .update({
         'lastMessage': message,

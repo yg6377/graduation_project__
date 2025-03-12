@@ -9,7 +9,7 @@ class ChatListScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text("채팅 목록")),
       body: StreamBuilder(
-        stream: FirebaseFirestore.instance.collection('chats').snapshots(),
+        stream: FirebaseFirestore.instance.collection('chatRooms').snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
