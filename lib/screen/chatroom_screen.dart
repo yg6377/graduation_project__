@@ -20,20 +20,26 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final TextEditingController _messageController = TextEditingController();
   final User? _currentUser = FirebaseAuth.instance.currentUser;
 
-  void _sendMessage() {
+  void _sendMessage() async {
     final String message = _messageController.text.trim();
 
     if (message.isNotEmpty && _currentUser != null) {
       FirebaseFirestore.instance
           .collection('chatRooms')
           .doc(widget.chatRoomId)
-          .collection('messages')
+          .collection('message')
           .add({
         'text': message,
         'sender': _currentUser!.email,
         'timestamp': FieldValue.serverTimestamp(),
       });
-
+      await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(widget.chatRoomId)
+          .update({
+        'lastMessage': message,
+        'lastTime': FieldValue.serverTimestamp(),
+      });
       _messageController.clear(); // 입력창 초기화
     }
   }
@@ -51,7 +57,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               stream: FirebaseFirestore.instance
                   .collection('chatRooms')
                   .doc(widget.chatRoomId)
-                  .collection('messages')
+                  .collection('message')
                   .orderBy('timestamp', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {

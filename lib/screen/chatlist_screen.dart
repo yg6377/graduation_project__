@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:timeago/timeago.dart' as timeago;
 import 'chatroom_screen.dart';
 
 class ChatListScreen extends StatelessWidget {
@@ -30,6 +30,12 @@ class ChatListScreen extends StatelessWidget {
               String userLocation = chatData['location'] ?? "지역 정보 없음";
               String profileImageUrl = chatData['profileImageUrl'] ?? "";
 
+              String lastMessage = chatData['lastMessage'] ?? "";
+              String lastTimeString = "";
+              if (lastTime != null) {
+                // timeago를 쓰려면 pubspec.yaml에 timeago 의존성을 추가해 주세요 (timeago: ^3.0.2 등)
+                lastTimeString = timeago.format(lastTime.toDate(), locale: 'ko');
+              }
 
 
               return ListTile(
