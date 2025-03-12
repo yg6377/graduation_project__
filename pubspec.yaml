@@ -41,6 +41,10 @@ dependencies:
   firebase_storage: ^12.4.4
   image_picker: ^0.8.5+3
 
+  intl: ^0.18.1   # 날짜 포맷을 위한 intl 패키지
+  timeago: ^3.5.0 # 상대적 시간 표시 (예: "5분 전")
+
+
 
 dev_dependencies:
   flutter_test:

@@ -16,7 +16,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
   void initState() {
     super.initState();
     // 초기 닉네임 설정
-    _nicknameController.text = _currentUser?.displayName ?? '닉네임 없음';
+    _nicknameController.text = _currentUser?.displayName ?? 'Enter your name';
   }
 
   // 닉네임 업데이트
@@ -25,7 +25,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
     if (newNickname.isNotEmpty) {
       await _currentUser?.updateDisplayName(newNickname);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('닉네임이 수정되었습니다.')),
+        SnackBar(content: Text('changed nickname')),
       );
       setState(() {});
     }
@@ -42,10 +42,6 @@ class _MyPageScreenState extends State<MyPageScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('마이페이지'),
-        centerTitle: true,
-      ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,14 +68,14 @@ class _MyPageScreenState extends State<MyPageScreen> {
                         TextField(
                           controller: _nicknameController,
                           decoration: InputDecoration(
-                            labelText: '닉네임 (수정 가능)',
+                            labelText: 'Nickname',
                             border: OutlineInputBorder(),
                           ),
                         ),
                         SizedBox(height: 8),
                         ElevatedButton(
                           onPressed: _updateNickname,
-                          child: Text('닉네임 수정'),
+                          child: Text('Change nickname'),
                         ),
                       ],
                     ),
@@ -93,7 +89,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                "'좋아요' 목록",
+                "Like list",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
@@ -110,7 +106,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
-                      child: Text('좋아요를 누른 게시글이 없습니다.'),
+                      child: Text('There are no posts you have liked.'),
                     ),
                   );
                 }
