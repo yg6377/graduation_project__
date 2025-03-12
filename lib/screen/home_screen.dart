@@ -170,7 +170,7 @@ class ProductListScreen extends StatelessWidget {
                           children: [
                             Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                             SizedBox(height: 4),
-                            Text('$price원', style: TextStyle(fontSize: 16)),
+                            Text('$price''NTD', style: TextStyle(fontSize: 16)),
                             SizedBox(height: 6),
                             Text(formattedTimestamp, style: TextStyle(fontSize: 14, color: Colors.grey)),
                           ],

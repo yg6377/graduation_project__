@@ -21,14 +21,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final User? _currentUser = FirebaseAuth.instance.currentUser;
   final ScrollController _scrollController = ScrollController(); // 스크롤 컨트롤러 추가
 
-  void _sendMessage() {
+  void _sendMessage() async {
     final String message = _messageController.text.trim();
 
     if (message.isNotEmpty && _currentUser != null) {
       FirebaseFirestore.instance
           .collection('chatRooms')
           .doc(widget.chatRoomId)
-          .collection('messages')
+          .collection('message')
           .add({
         'text': message,
         'sender': _currentUser!.email,
@@ -45,8 +45,27 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           curve: Curves.easeOut,
         );
       });
+      await FirebaseFirestore.instance
+          .collection('chatRooms')
+          .doc(widget.chatRoomId)
+          .update({
+        'lastMessage': message,
+        'lastTime': FieldValue.serverTimestamp(),
+      });
+      _messageController.clear(); // 입력창 초기화
+      _messageController.clear();
+
+      //메시지를 보낸 후 가장 아래로 스크롤 이동
+      Future.delayed(Duration(milliseconds: 300), () {
+        _scrollController.animateTo(
+          _scrollController.position.minScrollExtent,
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      });
     }
   }
+
 
 
   @override
@@ -62,6 +81,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   .doc(widget.chatRoomId)
                   .collection('messages')
                   .orderBy('timestamp', descending: true) // 최신 메시지가 아래로 옴
+                  .collection('message')
+                  .orderBy('timestamp', descending: true) // 최신 메시지가 아래로 옴
+
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {

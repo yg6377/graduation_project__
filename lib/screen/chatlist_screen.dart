@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'chatroom_screen.dart';
+import 'package:timeago/timeago.dart' as timeago;
+import 'chatroom_screen.dart';
+import 'package:intl/intl.dart';
+
 
 class ChatListScreen extends StatelessWidget {
   @override
@@ -9,7 +13,7 @@ class ChatListScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text("채팅 목록")),
       body: StreamBuilder(
-        stream: FirebaseFirestore.instance.collection('chats').snapshots(),
+        stream: FirebaseFirestore.instance.collection('chatRooms').snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
@@ -23,6 +27,24 @@ class ChatListScreen extends StatelessWidget {
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               var chatData = snapshot.data!.docs[index];
+              String chatId = chatData.id;
+              Timestamp? lastTime = chatData['lastTime']; // Firestore Timestamp
+
+              String userName = chatData['userName'] ?? "알 수 없음";
+              String userLocation = chatData['location'] ?? "지역 정보 없음";
+              String profileImageUrl = chatData['profileImageUrl'] ?? "";
+
+
+              String lastMessage = chatData['lastMessage'] ?? "";
+
+              String lastTimeString = "";
+
+              if (lastTime != null) {
+                // timeago를 쓰려면 pubspec.yaml에 timeago 의존성 추가
+                lastTimeString = timeago.format(lastTime.toDate(), locale: 'ko');
+              }
+
+
               String chatId = chatData.id;
               Timestamp? lastTime = chatData['lastTime']; // Firestore Timestamp
 
@@ -66,6 +88,26 @@ class ChatListScreen extends StatelessWidget {
         },
       ),
     );
+  }}
+
+
+  /// 🔥 시간을 "3분 전" 같은 형태로 변환
+  String _formatTime(Timestamp? timestamp) {
+    if (timestamp == null) return "방금 전";
+
+    DateTime dateTime = timestamp.toDate();
+    Duration difference = DateTime.now().difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return "방금 전";
+    } else if (difference.inMinutes < 60) {
+      return "${difference.inMinutes}분 전";
+    } else if (difference.inHours < 24) {
+      return "${difference.inHours}시간 전";
+    } else {
+      return DateFormat('MM/dd HH:mm').format(dateTime);
+    }
+  }
   }
 
   /// 🔥 시간을 "3분 전" 같은 형태로 변환
@@ -86,6 +128,10 @@ class ChatListScreen extends StatelessWidget {
     }
   }
 }
+
+
+
+
 
 
 
