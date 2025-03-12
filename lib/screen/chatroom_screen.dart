@@ -3,8 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ChatRoomScreen extends StatefulWidget {
-  final String chatRoomId; // 채팅방 ID
-  final String userName; // 대화 상대 이름
+  final String chatRoomId;
+  final String userName;
 
   const ChatRoomScreen({
     super.key,
@@ -19,6 +19,7 @@ class ChatRoomScreen extends StatefulWidget {
 class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final TextEditingController _messageController = TextEditingController();
   final User? _currentUser = FirebaseAuth.instance.currentUser;
+  final ScrollController _scrollController = ScrollController(); // 🔥 스크롤 컨트롤러 추가
 
   void _sendMessage() {
     final String message = _messageController.text.trim();
@@ -34,16 +35,24 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      _messageController.clear(); // 입력창 초기화
+      _messageController.clear();
+
+      //🔥 메시지를 보낸 후 가장 아래로 스크롤 이동
+      Future.delayed(Duration(milliseconds: 300), () {
+        _scrollController.animateTo(
+          _scrollController.position.minScrollExtent,
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      });
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.userName),
-      ),
+      appBar: AppBar(title: Text(widget.userName)),
       body: Column(
         children: [
           Expanded(
@@ -52,7 +61,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   .collection('chatRooms')
                   .doc(widget.chatRoomId)
                   .collection('messages')
-                  .orderBy('timestamp', descending: true)
+                  .orderBy('timestamp', descending: false) // 🔥 최신 메시지가 아래에 오도록 변경
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -66,23 +75,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 final messages = snapshot.data!.docs;
 
                 return ListView.builder(
-                  reverse: true,
+                  controller: _scrollController, // 🔥 스크롤 컨트롤러 연결
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];
-                    final isMine =
-                        message['sender'] == _currentUser?.email; // 내가 보낸 메시지 확인
+                    final isMine = message['sender'] == _currentUser?.email;
 
                     return Align(
-                      alignment:
-                      isMine ? Alignment.centerRight : Alignment.centerLeft,
+                      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
-                        margin: EdgeInsets.symmetric(
-                            vertical: 4, horizontal: 12),
+                        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 12),
                         padding: EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color:
-                          isMine ? Colors.blue[200] : Colors.grey[300],
+                          color: isMine ? Colors.blue[200] : Colors.grey[300],
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
@@ -95,8 +100,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                             SizedBox(height: 4),
                             Text(
                               message['sender'] ?? '',
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.black54),
+                              style: TextStyle(fontSize: 12, color: Colors.black54),
                             ),
                           ],
                         ),
