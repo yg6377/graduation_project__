@@ -18,7 +18,7 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
   File? _image;
   final ImagePicker _picker = ImagePicker();
 
-  /// 🔹 이미지 선택 함수
+  /// 이미지 선택 함수
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
@@ -28,7 +28,7 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
     }
   }
 
-  /// 🔹 상품 업로드 함수 (좋아요 필드 포함)
+  /// 상품 업로드 함수 (좋아요 필드 포함)
   Future<void> _uploadProduct() async {
     try {
       String title = titleController.text.isEmpty ? "No title" : titleController.text;

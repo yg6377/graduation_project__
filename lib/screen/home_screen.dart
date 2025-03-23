@@ -113,7 +113,7 @@ class ProductListScreen extends StatelessWidget {
           return Center(child: CircularProgressIndicator());
         }
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(child: Text('등록된 상품이 없습니다.'));
+          return Center(child: Text("There's no products."));
         }
 
         var products = snapshot.data!.docs;
@@ -170,7 +170,7 @@ class ProductListScreen extends StatelessWidget {
                           children: [
                             Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                             SizedBox(height: 4),
-                            Text('$price원', style: TextStyle(fontSize: 16)),
+                            Text('$price', style: TextStyle(fontSize: 16)),
                             SizedBox(height: 6),
                             Text(formattedTimestamp, style: TextStyle(fontSize: 14, color: Colors.grey)),
                           ],
@@ -222,9 +222,9 @@ class ProductDetailScreen extends StatelessWidget {
             SizedBox(height: 16),
             Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             SizedBox(height: 8),
-            Text('$price원', style: TextStyle(fontSize: 20, color: Colors.blueAccent)),
+            Text('$price', style: TextStyle(fontSize: 20, color: Colors.blueAccent)),
             SizedBox(height: 8),
-            Text('업로드된 시간: $timestamp', style: TextStyle(fontSize: 14, color: Colors.grey)),
+            Text('Uploaded by: $timestamp', style: TextStyle(fontSize: 14, color: Colors.grey)),
             SizedBox(height: 16),
             Text(description, style: TextStyle(fontSize: 16)),
           ],
