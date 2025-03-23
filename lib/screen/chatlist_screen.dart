@@ -1,13 +1,34 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'chatroom_screen.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import 'chatroom_screen.dart';
-import 'package:intl/intl.dart';
+import 'package:timeago/timeago.dart' as timeago_ko;
+
 
 
 class ChatListScreen extends StatelessWidget {
+  const ChatListScreen({Key? key}) : super(key: key);
+
+  String formatLastTime(Timestamp? timestamp) {
+    if (timestamp == null) {
+      return "방금 전";
+    }
+
+    final DateTime dateTime = timestamp.toDate();
+    final Duration difference = DateTime.now().difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return "방금 전";
+    } else if (difference.inMinutes < 60) {
+      return "${difference.inMinutes}분 전";
+    } else if (difference.inHours < 24) {
+      return "${difference.inHours}시간 전";
+    } else {
+      return "${difference.inDays}일 전";
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -28,29 +49,23 @@ class ChatListScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               var chatData = snapshot.data!.docs[index];
               String chatId = chatData.id;
-              Timestamp? lastTime = chatData['lastTime']; // Firestore Timestamp
+              Timestamp? lastTime = chatData['lastTime'];
+              String lastMessage = chatData['lastMessage'] ?? "";// Firestore Timestamp
 
-              String userName = chatData['userName'] ?? "알 수 없음";
+              List<dynamic> participants = chatData['participants'] ?? [];
+              String currentUserEmail = FirebaseAuth.instance.currentUser?.email ?? '';
+              String userName = participants.firstWhere(
+                    (email) => email != currentUserEmail,
+                orElse: () => "알 수 없음",
+              );
+
               String userLocation = chatData['location'] ?? "지역 정보 없음";
               String profileImageUrl = chatData['profileImageUrl'] ?? "";
+              String lastTimeString = formatLastTime(lastTime);
 
 
-              String lastMessage = chatData['lastMessage'] ?? "";
-
-              String lastTimeString = "";
-
-              if (lastTime != null) {
-                // timeago를 쓰려면 pubspec.yaml에 timeago 의존성 추가
-                lastTimeString = timeago.format(lastTime.toDate(), locale: 'ko');
-              }
 
 
-              String chatId = chatData.id;
-              Timestamp? lastTime = chatData['lastTime']; // Firestore Timestamp
-
-              String userName = chatData['userName'] ?? "알 수 없음";
-              String userLocation = chatData['location'] ?? "지역 정보 없음";
-              String profileImageUrl = chatData['profileImageUrl'] ?? "";
 
 
 
@@ -61,15 +76,29 @@ class ChatListScreen extends StatelessWidget {
                       : AssetImage('assets/default_profile.png') as ImageProvider,
                   radius: 25,
                 ),
-                title: Text(userName, style: TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                // title 영역에서 Row를 사용해 왼쪽엔 이름, 오른쪽엔 시간 표시
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(userLocation, style: TextStyle(fontSize: 12, color: Colors.grey)),
-                    SizedBox(height: 2),
-
+                    Text(
+                      '$userName ($userLocation)',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      lastTimeString, // 예: "방금 전", "3분 전" 등
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
                   ],
                 ),
+                // subtitle에 마지막 메시지
+                subtitle: lastMessage.isNotEmpty
+                    ? Text(
+                  lastMessage,
+                  style: TextStyle(fontSize: 13, color: Colors.black),
+                  maxLines: 1,        // 한 줄로만 표시 (원하면 조절)
+                  overflow: TextOverflow.ellipsis, // 길면 ... 처리
+                )
+                    : null,
 
                 onTap: () {
                   Navigator.push(
@@ -78,6 +107,9 @@ class ChatListScreen extends StatelessWidget {
                       builder: (context) => ChatRoomScreen(
                         chatRoomId: chatId,
                         userName: userName,
+                        productTitle: '',
+                        productImageUrl: '',
+                        productPrice: '',
                       ),
                     ),
                   );
@@ -91,43 +123,10 @@ class ChatListScreen extends StatelessWidget {
   }}
 
 
-  /// 🔥 시간을 "3분 전" 같은 형태로 변환
-  String _formatTime(Timestamp? timestamp) {
-    if (timestamp == null) return "방금 전";
 
-    DateTime dateTime = timestamp.toDate();
-    Duration difference = DateTime.now().difference(dateTime);
 
-    if (difference.inMinutes < 1) {
-      return "방금 전";
-    } else if (difference.inMinutes < 60) {
-      return "${difference.inMinutes}분 전";
-    } else if (difference.inHours < 24) {
-      return "${difference.inHours}시간 전";
-    } else {
-      return DateFormat('MM/dd HH:mm').format(dateTime);
-    }
-  }
-  }
 
-  /// 🔥 시간을 "3분 전" 같은 형태로 변환
-  String _formatTime(Timestamp? timestamp) {
-    if (timestamp == null) return "방금 전";
 
-    DateTime dateTime = timestamp.toDate();
-    Duration difference = DateTime.now().difference(dateTime);
-
-    if (difference.inMinutes < 1) {
-      return "방금 전";
-    } else if (difference.inMinutes < 60) {
-      return "${difference.inMinutes}분 전";
-    } else if (difference.inHours < 24) {
-      return "${difference.inHours}시간 전";
-    } else {
-      return DateFormat('MM/dd HH:mm').format(dateTime);
-    }
-  }
-}
 
 
 

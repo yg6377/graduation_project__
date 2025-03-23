@@ -5,12 +5,19 @@ import 'package:firebase_auth/firebase_auth.dart';
 class ChatRoomScreen extends StatefulWidget {
   final String chatRoomId;
   final String userName;
+  final String productTitle;
+  final String productImageUrl;
+  final String productPrice;
 
   const ChatRoomScreen({
-    super.key,
+    Key? key,
     required this.chatRoomId,
     required this.userName,
-  });
+    required this.productTitle,
+    required this.productImageUrl,
+    required this.productPrice,
+  }) : super(key: key);
+
 
   @override
   State<ChatRoomScreen> createState() => _ChatRoomScreenState();
@@ -49,20 +56,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           .collection('chatRooms')
           .doc(widget.chatRoomId)
           .update({
+
         'lastMessage': message,
         'lastTime': FieldValue.serverTimestamp(),
       });
       _messageController.clear(); // 입력창 초기화
       _messageController.clear();
 
-      //메시지를 보낸 후 가장 아래로 스크롤 이동
-      Future.delayed(Duration(milliseconds: 300), () {
-        _scrollController.animateTo(
-          _scrollController.position.minScrollExtent,
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      });
     }
   }
 
@@ -70,8 +70,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final String currentUserEmail = _currentUser?.email ?? '';
+    String otherUserEmail = widget.userName;
+    if (widget.chatRoomId.contains('_')) {
+      List<String> emails = widget.chatRoomId.split('_');
+      otherUserEmail = emails.firstWhere(
+            (email) => email != currentUserEmail,
+        orElse: () => widget.userName,
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(title: Text(widget.userName)),
+      appBar: AppBar(title: Text(otherUserEmail),),
       body: Column(
         children: [
           Expanded(
@@ -79,11 +89,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               stream: FirebaseFirestore.instance
                   .collection('chatRooms')
                   .doc(widget.chatRoomId)
-                  .collection('messages')
-                  .orderBy('timestamp', descending: true) // 최신 메시지가 아래로 옴
                   .collection('message')
-                  .orderBy('timestamp', descending: true) // 최신 메시지가 아래로 옴
-
+                  .orderBy('timestamp', descending: false) // 최신 메시지가 아래로 옴
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -115,8 +122,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              message['text'],
+                            Text(message['text'],
                               style: TextStyle(fontSize: 16),
                             ),
                             SizedBox(height: 4),
