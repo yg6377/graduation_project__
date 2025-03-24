@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:graduation_project_1/screen/product_comments.dart';
-// ─────────────────────────────────────────────────────────────────────────────
-// 2. "상품 상세 페이지" 화면
-// ─────────────────────────────────────────────────────────────────────────────
+
 class ProductDetailScreen extends StatefulWidget {
   final String productId;
   final String title;
@@ -34,8 +32,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       appBar: AppBar(
         title: Text(widget.title),
       ),
-
-      // 🔹 상품 정보 부분
       body: SingleChildScrollView(
         child: Padding(
           padding: EdgeInsets.all(16),
@@ -44,7 +40,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             children: [
               Center(
                 child: widget.imageUrl.isNotEmpty
-                    ? Image.network(widget.imageUrl, width: 200, height: 200, fit: BoxFit.cover)
+                    ? Image.network(
+                  widget.imageUrl,
+                  width: 200,
+                  height: 200,
+                  fit: BoxFit.cover,
+                )
                     : Icon(Icons.image, size: 200),
               ),
               SizedBox(height: 16),
@@ -54,7 +55,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
               SizedBox(height: 8),
               Text(
-                '${widget.price}원',
+                '${widget.price} NTD',
                 style: TextStyle(fontSize: 20, color: Colors.blueAccent),
               ),
               SizedBox(height: 8),
@@ -67,14 +68,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 widget.description,
                 style: TextStyle(fontSize: 16),
               ),
-
               SizedBox(height: 50), // 하단 버튼들과 공간 확보
             ],
           ),
         ),
       ),
-
-      // 🔹 하단 버튼 2개: 댓글 + Send Message
       bottomNavigationBar: Container(
         padding: EdgeInsets.all(12),
         child: Row(
@@ -116,9 +114,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             Expanded(
               child: ElevatedButton(
                 onPressed: () {
-                  // 친구가 구현할 채팅 로직 대신 간단 안내만
+                  // 채팅 기능은 아직 미구현
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Send Message 버튼 클릭됨! (채팅 미구현)')),
+                    SnackBar(content: Text('기능 추가하쇼')),
                   );
                 },
                 child: Text('Send Message'),
@@ -129,5 +127,4 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       ),
     );
   }
-
 }

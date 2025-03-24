@@ -28,7 +28,7 @@ class _ProductCommentsScreenState extends State<ProductCommentsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('댓글'),
+        title: Text('Comments'),
       ),
       body: Column(
         children: [
