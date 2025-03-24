@@ -49,7 +49,7 @@ class ProductListScreen extends StatelessWidget {
                           imageUrl,
                           fit: BoxFit.cover,
                         )
-                            : Icon(Icons.image, size: 80),
+                            : Image.asset('assets/images/no_image_pig.png', fit: BoxFit.cover),
                       ),
                     ),
                     title: Text(title, style: TextStyle(fontSize: 18)),
