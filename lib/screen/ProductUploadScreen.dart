@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
@@ -31,6 +32,9 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
   /// 🔹 상품 업로드 함수 (좋아요 필드 포함)
   Future<void> _uploadProduct() async {
     try {
+      final user = FirebaseAuth.instance.currentUser;
+      String? uploaderEmail = user?.email;
+
       String title = titleController.text.isEmpty ? "No title" : titleController.text;
       String price = priceController.text.isEmpty ? "Price unknown" : "${priceController.text} NTD";
       String description = descriptionController.text.isEmpty ? "No description" : descriptionController.text;
@@ -51,6 +55,7 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
         'imageUrl': imageUrl,
         'likes': 0, // 🔹 좋아요 초기값 추가
         'timestamp': FieldValue.serverTimestamp(),
+        'sellerEmail': uploaderEmail,
       });
 
       Navigator.pop(context);
