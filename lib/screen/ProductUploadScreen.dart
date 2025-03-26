@@ -15,11 +15,11 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
   final TextEditingController titleController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
-  String selectedCondition = 'New';
+
   File? _image;
   final ImagePicker _picker = ImagePicker();
 
-  /// 🔹 이미지 선택 함수
+  /// 이미지 선택 함수
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
@@ -29,17 +29,19 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
     }
   }
 
-  /// 🔹 상품 업로드 함수 (좋아요 필드 포함)
+  /// 상품 업로드 함수 (Firestore에 productId 필드 추가)
   Future<void> _uploadProduct() async {
     try {
+      // 제목, 가격, 설명 기본값 처리
       final user = FirebaseAuth.instance.currentUser;
       String? uploaderEmail = user?.email;
 
       String title = titleController.text.isEmpty ? "No title" : titleController.text;
-      String price = priceController.text.isEmpty ? "Price unknown" : "${priceController.text} NTD";
+      String price = priceController.text.isEmpty ? "Price unknown" : "${priceController.text} ";
       String description = descriptionController.text.isEmpty ? "No description" : descriptionController.text;
-      String imageUrl = "";
 
+      // 이미지 업로드
+      String imageUrl = "";
       if (_image != null) {
         String fileName = DateTime.now().millisecondsSinceEpoch.toString();
         Reference storageRef = FirebaseStorage.instance.ref().child('product_images/$fileName.jpg');
@@ -48,17 +50,25 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
         imageUrl = await snapshot.ref.getDownloadURL();
       }
 
-      await FirebaseFirestore.instance.collection('products').add({
+      // Firestore에 새 문서 생성
+      final docRef = await FirebaseFirestore.instance.collection('products').add({
         'title': title,
         'price': price,
         'description': description,
         'imageUrl': imageUrl,
-        'likes': 0, // 🔹 좋아요 초기값 추가
+        'likes': 0, // 좋아요 초기값
         'timestamp': FieldValue.serverTimestamp(),
         'sellerEmail': uploaderEmail,
       });
 
+      // 문서 ID를 'productId' 필드로 업데이트
+      await docRef.update({
+        'productId': docRef.id,
+      });
+
+      // 업로드 완료 후 이전 화면으로 이동
       Navigator.pop(context);
+
     } catch (e) {
       print("Error uploading product: $e");
     }
@@ -88,16 +98,25 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
                     : Image.file(_image!, width: 100, height: 100),
               ),
               SizedBox(height: 10),
-              TextField(controller: titleController, decoration: InputDecoration(labelText: 'Product Name')),
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(labelText: 'Product Name'),
+              ),
               TextField(
                 controller: priceController,
                 decoration: InputDecoration(labelText: 'Price (Numbers only)'),
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               ),
-              TextField(controller: descriptionController, decoration: InputDecoration(labelText: 'Description')),
+              TextField(
+                controller: descriptionController,
+                decoration: InputDecoration(labelText: 'Description'),
+              ),
               SizedBox(height: 20),
-              ElevatedButton(onPressed: _uploadProduct, child: Text('Upload')),
+              ElevatedButton(
+                onPressed: _uploadProduct,
+                child: Text('Upload'),
+              ),
             ],
           ),
         ),
