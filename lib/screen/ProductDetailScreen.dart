@@ -55,12 +55,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
               SizedBox(height: 8),
               Text(
-                '${widget.price} NTD',
+                '${widget.price} ',
                 style: TextStyle(fontSize: 20, color: Colors.blueAccent),
               ),
               SizedBox(height: 8),
               Text(
-                '업로드 시간: ${widget.timestamp}',
+                'Uploaded by: ${widget.timestamp}',
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               SizedBox(height: 16),

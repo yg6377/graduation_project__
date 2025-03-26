@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import 'ProductDetailScreen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -19,12 +22,25 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
-  void _search() {
+  void _search() async {
     String query = _searchController.text.trim();
-    if (query.isNotEmpty) {
-      _addRecentSearch(query);
-      print("Search executed: $query"); // 🔍 Implement actual search logic here (e.g., Firestore)
-    }
+    if (query.isEmpty) return;
+
+    _addRecentSearch(query);
+
+    final allDocs = await FirebaseFirestore.instance.collection('products').get();
+    final results = allDocs.docs.where((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      final title = data['title']?.toLowerCase() ?? '';
+      return title.contains(query.toLowerCase());
+    }).toList();
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SearchResultScreen(results: results),
+      ),
+    );
   }
 
   @override
@@ -34,7 +50,7 @@ class _SearchScreenState extends State<SearchScreen> {
         preferredSize: Size.fromHeight(60.0), // Adjust search bar height
         child: AppBar(
           automaticallyImplyLeading: false, // Remove default back button
-          leading: IconButton( // 🔹 Add back button on the left
+          leading: IconButton(
             icon: Icon(Icons.arrow_back),
             onPressed: () {
               Navigator.pop(context); // 🔙 Go back to the previous screen
@@ -95,6 +111,72 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class SearchResultScreen extends StatelessWidget {
+  final List<QueryDocumentSnapshot> results;
+
+  const SearchResultScreen({required this.results, Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Results')),
+      body: ListView.builder(
+        itemCount: results.length,
+        itemBuilder: (context, index) {
+          final product = results[index];
+          final productData = product.data() as Map<String, dynamic>;
+
+          final timestampValue = productData['timestamp'];
+          final String timestampString = (timestampValue is Timestamp)
+              ? timestampValue.toDate().toString()
+              : '';
+
+          final String productId = productData['productId'] ?? product.id;
+          final String title = productData['title'] ?? '';
+          final String price = productData['price']?.toString() ?? '';
+          final String imageUrl = productData['imageUrl'] ?? '';
+          final String description = productData['description'] ?? '';
+
+          return Card(
+            margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: ListTile(
+                leading: SizedBox(
+                  width: 80,
+                  height: 80,
+                  child: Center(
+                    child: imageUrl.isNotEmpty
+                        ? Image.network(imageUrl, fit: BoxFit.cover)
+                        : Image.asset('assets/images/no_image_pig.png', fit: BoxFit.cover),
+                  ),
+                ),
+                title: Text(title, style: TextStyle(fontSize: 18)),
+                subtitle: Text(price, style: TextStyle(fontSize: 16)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProductDetailScreen(
+                        productId: productId,
+                        title: title,
+                        price: price,
+                        description: description,
+                        imageUrl: imageUrl,
+                        timestamp: timestampString,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          );
+        },
       ),
     );
   }

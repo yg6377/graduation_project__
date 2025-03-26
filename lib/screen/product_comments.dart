@@ -32,7 +32,7 @@ class _ProductCommentsScreenState extends State<ProductCommentsScreen> {
       ),
       body: Column(
         children: [
-          // 🔹 댓글 목록
+          // 댓글 목록
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -53,15 +53,15 @@ class _ProductCommentsScreenState extends State<ProductCommentsScreen> {
                     var data = docs[index].data() as Map<String, dynamic>;
                     return ListTile(
                       title: Text(data['text'] ?? ''),
-                      subtitle: Text(data['userId'] ?? '익명'),
-                    );
+                      subtitle: Text(data['userId'] ?? 'Unknown'),
+                      );
                   },
                 );
               },
             ),
           ),
 
-          // 🔹 댓글 입력창
+          // 댓글 입력창
           Container(
             padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             color: Colors.grey[200],
@@ -93,7 +93,7 @@ class _ProductCommentsScreenState extends State<ProductCommentsScreen> {
                       _commentController.clear();
                     }
                   },
-                  child: Text('등록'),
+                  child: Text('upload'),
                 ),
               ],
             ),
