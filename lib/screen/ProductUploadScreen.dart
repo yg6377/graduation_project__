@@ -33,8 +33,8 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
   Future<void> _uploadProduct() async {
     try {
       // 제목, 가격, 설명 기본값 처리
-      final user = FirebaseAuth.instance.currentUser;
-      String? uploaderEmail = user?.email;
+      final user = FirebaseAuth.instance.currentUser; //판매자 이메일 저장
+      String? uploaderEmail = user?.email; //판매자 이메일 저장
 
       String title = titleController.text.isEmpty ? "No title" : titleController.text;
       String price = priceController.text.isEmpty ? "Price unknown" : "${priceController.text} ";
@@ -58,10 +58,10 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
         'imageUrl': imageUrl,
         'likes': 0, // 좋아요 초기값
         'timestamp': FieldValue.serverTimestamp(),
-        'sellerEmail': uploaderEmail,
+        'sellerEmail': uploaderEmail, //판매자 이메일 저장
       });
 
-      // 문서 ID를 'productId' 필드로 업데이트
+      // 문서 ID를 'productId' 필드로 업데이트 (firestore 문서ID저장)
       await docRef.update({
         'productId': docRef.id,
       });
