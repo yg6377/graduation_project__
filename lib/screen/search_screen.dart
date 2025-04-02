@@ -171,11 +171,13 @@ class SearchResultScreen extends StatelessWidget {
                         imageUrl: imageUrl,
                         timestamp: timestampString,
                         sellerEmail: sellerEmail,
-                        chatRoomId: '',                // ✅ 필수니까 빈값으로라도 채움
-                        userName: sellerEmail,                  // ✅ 추후 로그인 유저로 넘겨도 됨
+                        chatRoomId: '',                // 필수니까 빈값으로라도 채움
+                        userName: sellerEmail,                  // 추후 로그인 유저로 넘겨도 됨
+                        sellerUid: product['sellerUid'],
                         productTitle: title,
                         productImageUrl: imageUrl,
                         productPrice: price,
+
                       ),
                     ),
                   );
