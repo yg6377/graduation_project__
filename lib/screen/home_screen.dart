@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'ProductUploadScreen.dart';
 import 'package:graduation_project_1/screen/productlist_screen.dart';
 import 'ProductDetailScreen.dart';
 import 'ProductUploadScreen.dart';

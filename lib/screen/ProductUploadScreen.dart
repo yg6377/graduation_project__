@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
@@ -32,6 +33,9 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
   Future<void> _uploadProduct() async {
     try {
       // 제목, 가격, 설명 기본값 처리
+      final user = FirebaseAuth.instance.currentUser; //판매자 이메일 저장
+      String? uploaderEmail = user?.email; //판매자 이메일 저장
+
       String title = titleController.text.isEmpty ? "No title" : titleController.text;
       String price = priceController.text.isEmpty ? "Price unknown" : "${priceController.text} ";
       String description = descriptionController.text.isEmpty ? "No description" : descriptionController.text;
@@ -54,9 +58,10 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
         'imageUrl': imageUrl,
         'likes': 0, // 좋아요 초기값
         'timestamp': FieldValue.serverTimestamp(),
+        'sellerEmail': uploaderEmail, //판매자 이메일 저장
       });
 
-      // 문서 ID를 'productId' 필드로 업데이트
+      // 문서 ID를 'productId' 필드로 업데이트 (firestore 문서ID저장)
       await docRef.update({
         'productId': docRef.id,
       });

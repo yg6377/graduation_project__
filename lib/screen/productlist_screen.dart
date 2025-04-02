@@ -34,6 +34,8 @@ class ProductListScreen extends StatelessWidget {
               final String price = productData['price'] ?? '';
               final String imageUrl = productData['imageUrl'] ?? '';
               final String description = productData['description'] ?? '';
+              final String sellerEmail = productData['sellerEmail'] ?? ''; //0327
+
 
               return Card(
                 margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -65,6 +67,12 @@ class ProductListScreen extends StatelessWidget {
                             description: description,
                             imageUrl: imageUrl,
                             timestamp: timestampString,
+                            sellerEmail: sellerEmail,
+                            chatRoomId: '',               // ✅ 추가
+                            userName: sellerEmail,                 // ✅ 추가 (필요 없으면 '' 가능)
+                            productTitle: title,          // ✅ 추가
+                            productImageUrl: imageUrl,    // ✅ 추가
+                            productPrice: price,//0327
                           ),
                         ),
                       );

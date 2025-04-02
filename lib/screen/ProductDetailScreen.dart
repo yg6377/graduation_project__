@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:graduation_project_1/screen/product_comments.dart';
+import 'package:graduation_project_1/screen/chatroom_screen.dart';
+
+
 
 class ProductDetailScreen extends StatefulWidget {
   final String productId;
@@ -10,6 +13,15 @@ class ProductDetailScreen extends StatefulWidget {
   final String description;
   final String imageUrl;
   final String timestamp;
+  final String sellerEmail; // 0327
+  final String chatRoomId;
+  final String userName;
+  final String productTitle;
+  final String productImageUrl;
+  final String productPrice;
+
+
+
 
   const ProductDetailScreen({
     required this.productId,
@@ -18,6 +30,12 @@ class ProductDetailScreen extends StatefulWidget {
     required this.description,
     required this.imageUrl,
     required this.timestamp,
+    required this.sellerEmail,//0327
+    required this.chatRoomId,
+    required this.userName,
+    required this.productTitle,
+    required this.productImageUrl,
+    required this.productPrice,
     Key? key,
   }) : super(key: key);
 
@@ -28,6 +46,9 @@ class ProductDetailScreen extends StatefulWidget {
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   @override
   Widget build(BuildContext context) {
+    final myEmail = FirebaseAuth.instance.currentUser?.email;
+    final sellerEmail = widget.sellerEmail;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -113,10 +134,55 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             // (2) Send Message 버튼
             Expanded(
               child: ElevatedButton(
-                onPressed: () {
-                  // 채팅 기능은 아직 미구현
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('기능 추가하쇼')),
+                onPressed: () async {
+                  final currentUserEmail = FirebaseAuth.instance.currentUser?.email;
+
+                  if (currentUserEmail == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('로그인이 필요합니다.')),
+                    );
+                    return;
+                  }
+
+                  if (currentUserEmail == widget.sellerEmail) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('자기 자신에게 메시지를 보낼 수 없습니다.')),
+                    );
+                    return;
+                  }
+
+                  // ✅ 채팅방 ID 생성 (이메일 2개 정렬해서 고유값 만들기)
+                  List<String> emails = [myEmail!, sellerEmail]; // 두 참여자의 이메일
+                  emails.sort(); // 알파벳 순 정렬
+                  String chatRoomId = emails.join('_');
+
+                  // ✅ 채팅방 Firestore 문서가 없으면 생성
+                  final chatRef = FirebaseFirestore.instance.collection('chatRooms').doc(chatRoomId);
+                  final chatSnapshot = await chatRef.get();
+
+                  if (!chatSnapshot.exists) {
+                    await chatRef.set({
+                      'participants': emails,
+                      'lastMessage': '',
+                      'lastTime': FieldValue.serverTimestamp(),
+                      'userName': widget.sellerEmail,
+                      'location': '', // 원하면 location도 저장 가능
+                      'profileImageUrl': '',
+                    });
+                  }
+
+                  // ✅ 채팅방으로 이동
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ChatRoomScreen(
+                        chatRoomId: chatRoomId,
+                        userName: widget.sellerEmail,
+                        productTitle: widget.title,
+                        productImageUrl: widget.imageUrl,
+                        productPrice: widget.price,
+                      ),
+                    ),
                   );
                 },
                 child: Text('Send Message'),

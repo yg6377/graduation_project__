@@ -141,6 +141,7 @@ class SearchResultScreen extends StatelessWidget {
           final String price = productData['price']?.toString() ?? '';
           final String imageUrl = productData['imageUrl'] ?? '';
           final String description = productData['description'] ?? '';
+          final String sellerEmail = productData['sellerEmail'] ?? '';
 
           return Card(
             margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -169,6 +170,12 @@ class SearchResultScreen extends StatelessWidget {
                         description: description,
                         imageUrl: imageUrl,
                         timestamp: timestampString,
+                        sellerEmail: sellerEmail,
+                        chatRoomId: '',                // ✅ 필수니까 빈값으로라도 채움
+                        userName: sellerEmail,                  // ✅ 추후 로그인 유저로 넘겨도 됨
+                        productTitle: title,
+                        productImageUrl: imageUrl,
+                        productPrice: price,
                       ),
                     ),
                   );
