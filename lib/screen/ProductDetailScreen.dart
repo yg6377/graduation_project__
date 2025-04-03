@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:graduation_project_1/screen/product_comments.dart';
 import 'package:graduation_project_1/screen/chatroom_screen.dart';
+import 'package:graduation_project_1/screen/edit_product_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final String productId;
@@ -50,6 +51,60 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) async {
+              if (value == 'edit') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EditScreen(
+                      productId: widget.productId,
+                      title: widget.title,
+                      price: widget.price,
+                      description: widget.description,
+                      imageUrl: '',
+                    ),
+                  ),
+                );
+              } else if (value == 'delete') {
+                bool confirmed = await showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text('삭제 확인'),
+                    content: Text('정말 이 게시글을 삭제하시겠습니까?'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(context, false), child: Text('취소')),
+                      TextButton(onPressed: () => Navigator.pop(context, true), child: Text('삭제')),
+                    ],
+                  ),
+                );
+                if (confirmed) {
+                  await FirebaseFirestore.instance
+                      .collection('products')
+                      .doc(widget.productId)
+                      .delete();
+                  Navigator.pop(context); // 삭제 후 이전 화면으로 이동
+                }
+              } else if (value == 'report') {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('신고가 접수되었습니다.')));
+              }
+            },
+            itemBuilder: (context) {
+              final isOwner = FirebaseAuth.instance.currentUser?.uid == widget.sellerUid;
+              if (isOwner) {
+                return [
+                  PopupMenuItem(value: 'edit', child: Text('수정')),
+                  PopupMenuItem(value: 'delete', child: Text('삭제')),
+                ];
+              } else {
+                return [
+                  PopupMenuItem(value: 'report', child: Text('신고')),
+                ];
+              }
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -88,45 +143,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 style: TextStyle(fontSize: 16),
               ),
               SizedBox(height: 50), // 하단 버튼들과 공간 확보
-              // 게시글 수정 및 삭제 버튼 (작성자일 때만 표시)
-              if (FirebaseAuth.instance.currentUser?.uid == widget.sellerUid)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () {
-                        // 수정 페이지 이동 로직
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('수정 기능은 아직 미구현입니다.')));
-                      },
-                      child: Text('수정'),
-                    ),
-                    SizedBox(width: 8),
-                    TextButton(
-                      onPressed: () async {
-                        bool confirmed = await showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: Text('삭제 확인'),
-                            content: Text('정말 이 게시글을 삭제하시겠습니까?'),
-                            actions: [
-                              TextButton(onPressed: () => Navigator.pop(context, false), child: Text('취소')),
-                              TextButton(onPressed: () => Navigator.pop(context, true), child: Text('삭제')),
-                            ],
-                          ),
-                        );
-
-                        if (confirmed) {
-                          await FirebaseFirestore.instance
-                              .collection('products')
-                              .doc(widget.productId)
-                              .delete();
-                          Navigator.pop(context); // 삭제 후 이전 화면으로 이동
-                        }
-                      },
-                      child: Text('삭제', style: TextStyle(color: Colors.red)),
-                    ),
-                  ],
-                ),
             ],
           ),
         ),
