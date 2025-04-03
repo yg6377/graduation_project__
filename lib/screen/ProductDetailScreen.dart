@@ -12,12 +12,15 @@ class ProductDetailScreen extends StatefulWidget {
   final String imageUrl;
   final String timestamp;
   final String sellerEmail; // 0327
-  final String sellerUid;
   final String chatRoomId;
   final String userName;
   final String productTitle;
   final String productImageUrl;
   final String productPrice;
+  final String sellerUid;
+
+
+
 
   const ProductDetailScreen({
     required this.productId,
@@ -27,12 +30,13 @@ class ProductDetailScreen extends StatefulWidget {
     required this.imageUrl,
     required this.timestamp,
     required this.sellerEmail,//0327
-    required this.sellerUid,
     required this.chatRoomId,
     required this.userName,
     required this.productTitle,
     required this.productImageUrl,
     required this.productPrice,
+    required this.sellerUid,
+
 
     Key? key,
   }) : super(key: key);
@@ -170,49 +174,49 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             Expanded(
               child: ElevatedButton(
                 onPressed: () async {
-                  final currentUserEmail = FirebaseAuth.instance.currentUser?.email;
+                  final myUid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-                  if (currentUserEmail == null) {
+
+                  if (myUid == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('로그인이 필요합니다.')),
                     );
                     return;
                   }
 
-                  if (currentUserEmail == widget.sellerEmail) {
+                  if (myUid == widget.sellerEmail) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('자기 자신에게 메시지를 보낼 수 없습니다.')),
                     );
                     return;
                   }
 
-                  // ✅ 채팅방 ID 생성 (이메일 2개 정렬해서 고유값 만들기)
-                  List<String> emails = [myEmail!, sellerEmail]; // 두 참여자의 이메일
-                  emails.sort(); // 알파벳 순 정렬
-                  String chatRoomId = emails.join('_');
+                  List<String> uids = [myUid, widget.sellerUid];
+                  uids.sort();
+                  final chatRoomId = uids.join('_');
 
-                  // ✅ 채팅방 Firestore 문서가 없으면 생성
+                  //채팅방 문서가 없다면 생성
                   final chatRef = FirebaseFirestore.instance.collection('chatRooms').doc(chatRoomId);
                   final chatSnapshot = await chatRef.get();
 
                   if (!chatSnapshot.exists) {
                     await chatRef.set({
-                      'participants': emails,
+                      'participants': uids,
                       'lastMessage': '',
                       'lastTime': FieldValue.serverTimestamp(),
-                      'userName': widget.sellerEmail,
-                      'location': '', // 원하면 location도 저장 가능
+                      'userName': widget.sellerUid, // or nickname
+                      'location': '',
                       'profileImageUrl': '',
                     });
                   }
 
-                  // ✅ 채팅방으로 이동
+                  //채팅방으로 이동
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => ChatRoomScreen(
                         chatRoomId: chatRoomId,
-                        userName: widget.sellerEmail,
+                        userName: widget.sellerUid,
                         productTitle: widget.title,
                         productImageUrl: widget.imageUrl,
                         productPrice: widget.price,

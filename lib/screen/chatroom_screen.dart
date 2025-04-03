@@ -18,15 +18,37 @@ class ChatRoomScreen extends StatefulWidget {
     required this.productPrice,
   }) : super(key: key);
 
-
   @override
   State<ChatRoomScreen> createState() => _ChatRoomScreenState();
 }
 
 class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final TextEditingController _messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   final User? _currentUser = FirebaseAuth.instance.currentUser;
-  final ScrollController _scrollController = ScrollController(); // 스크롤 컨트롤러 추가
+
+  String _otherUserNickname = '상대방';
+  late String otherUid;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final currentUid = _currentUser?.uid ?? '';
+    final uids = widget.chatRoomId.split('_');
+    otherUid = uids.firstWhere((uid) => uid != currentUid, orElse: () => '');
+
+    // 닉네임 가져오기
+    if (otherUid.isNotEmpty) {
+      FirebaseFirestore.instance.collection('users').doc(otherUid).get().then((doc) {
+        if (doc.exists && doc.data()!.containsKey('nickname')) {
+          setState(() {
+            _otherUserNickname = doc['nickname'];
+          });
+        }
+      });
+    }
+  }
 
   void _sendMessage() async {
     final String message = _messageController.text.trim();
@@ -38,13 +60,22 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           .collection('message')
           .add({
         'text': message,
-        'sender': _currentUser!.email,
+        'sender': _currentUser!.uid,
         'timestamp': FieldValue.serverTimestamp(),
       });
 
       _messageController.clear();
 
-      //메시지를 보낸 후 가장 아래로 스크롤 이동
+      // 최신 메시지 정보 업데이트
+      await FirebaseFirestore.instance
+          .collection('chatRooms')
+          .doc(widget.chatRoomId)
+          .update({
+        'lastMessage': message,
+        'lastTime': FieldValue.serverTimestamp(),
+      });
+
+      // 자동 스크롤
       Future.delayed(Duration(milliseconds: 300), () {
         _scrollController.animateTo(
           _scrollController.position.minScrollExtent,
@@ -52,36 +83,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           curve: Curves.easeOut,
         );
       });
-      await FirebaseFirestore.instance
-          .collection('chatRooms')
-          .doc(widget.chatRoomId)
-          .update({
-
-        'lastMessage': message,
-        'lastTime': FieldValue.serverTimestamp(),
-      });
-      _messageController.clear(); // 입력창 초기화
-      _messageController.clear();
-
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
-    final String currentUserEmail = _currentUser?.email ?? '';
-    String otherUserEmail = widget.userName;
-    if (widget.chatRoomId.contains('_')) {
-      List<String> emails = widget.chatRoomId.split('_');
-      otherUserEmail = emails.firstWhere(
-            (email) => email != currentUserEmail,
-        orElse: () => widget.userName,
-      );
-    }
-
     return Scaffold(
-      appBar: AppBar(title: Text(otherUserEmail),),
+      appBar: AppBar(title: Text(_otherUserNickname)),
       body: Column(
         children: [
           Expanded(
@@ -90,7 +98,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   .collection('chatRooms')
                   .doc(widget.chatRoomId)
                   .collection('message')
-                  .orderBy('timestamp', descending: false) // 최신 메시지가 아래로 옴
+                  .orderBy('timestamp', descending: false)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -104,11 +112,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 final messages = snapshot.data!.docs;
 
                 return ListView.builder(
-                  controller: _scrollController, // 스크롤 컨트롤러 연결
+                  controller: _scrollController,
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];
-                    final isMine = message['sender'] == _currentUser?.email;
+                    final isMine = message['sender'] == _currentUser?.uid;
 
                     return Align(
                       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
@@ -122,13 +130,27 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(message['text'],
+                            Text(
+                              message['text'],
                               style: TextStyle(fontSize: 16),
                             ),
                             SizedBox(height: 4),
-                            Text(
-                              message['sender'] ?? '',
-                              style: TextStyle(fontSize: 12, color: Colors.black54),
+                            FutureBuilder<DocumentSnapshot>(
+                              future: FirebaseFirestore.instance.collection('users').doc(message['sender']).get(),
+                              builder: (context, snapshot) {
+                                String senderNickname = '알 수 없음';
+                                if (snapshot.hasData && snapshot.data != null) {
+                                  final userData = snapshot.data!.data() as Map<String, dynamic>;
+                                  if (userData.containsKey('nickname')) {
+                                    senderNickname = userData['nickname'];
+                                  }
+                                }
+
+                                return Text(
+                                  senderNickname,
+                                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                                );
+                              },
                             ),
                           ],
                         ),
