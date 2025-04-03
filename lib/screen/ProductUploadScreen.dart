@@ -34,7 +34,7 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
     try {
       // 제목, 가격, 설명 기본값 처리
       final user = FirebaseAuth.instance.currentUser; //판매자 이메일 저장
-      String? uploaderUid = user?.uid; //판매자 이메일 저장
+      String? uploaderEmail = user?.email; //판매자 이메일 저장
 
       String title = titleController.text.isEmpty ? "No title" : titleController.text;
       String price = priceController.text.isEmpty ? "Price unknown" : "${priceController.text} ";
@@ -58,7 +58,7 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
         'imageUrl': imageUrl,
         'likes': 0, // 좋아요 초기값
         'timestamp': FieldValue.serverTimestamp(),
-
+        'sellerEmail': uploaderEmail, //판매자 이메일 저장
         'sellerUid': FirebaseAuth.instance.currentUser!.uid,
       });
 
