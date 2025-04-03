@@ -53,8 +53,20 @@ class _ProductCommentsScreenState extends State<ProductCommentsScreen> {
                     var data = docs[index].data() as Map<String, dynamic>;
                     return ListTile(
                       title: Text(data['text'] ?? ''),
-                      subtitle: Text(data['userId'] ?? 'Unknown'),
-                      );
+                      subtitle: FutureBuilder<DocumentSnapshot>(
+                        future: FirebaseFirestore.instance.collection('users').doc(data['userId']).get(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return Text('Loading...');
+                          }
+                          if (!snapshot.hasData || !snapshot.data!.exists) {
+                            return Text('Unknown');
+                          }
+                          final userData = snapshot.data!.data() as Map<String, dynamic>;
+                          return Text(userData['nickname'] ?? 'No nickname');
+                        },
+                      ),
+                    );
                   },
                 );
               },
