@@ -75,6 +75,7 @@ class ProductListScreen extends StatelessWidget {
                             productTitle: title,          // 추가
                             productImageUrl: imageUrl,    // 추가
                             productPrice: price,//0327
+                            //sellerUid: sellerUid,
                           ),
                         ),
                       );
