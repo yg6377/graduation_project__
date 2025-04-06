@@ -22,10 +22,17 @@ class _MyPageScreenState extends State<MyPageScreen> {
   // 닉네임 업데이트
   void _updateNickname() async {
     String newNickname = _nicknameController.text.trim();
-    if (newNickname.isNotEmpty) {
-      await _currentUser?.updateDisplayName(newNickname);
+    if (newNickname.isNotEmpty && _currentUser != null) {
+      await _currentUser!.updateDisplayName(newNickname);
+
+      // Firebase에서도 업데디트할 수 있게 바꿈.
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .update({'nickname': newNickname});
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('changed nickname')),
+        SnackBar(content: Text('nickname successfully changed!')),
       );
       setState(() {});
     }
