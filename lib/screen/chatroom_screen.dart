@@ -27,63 +27,97 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final ScrollController _scrollController = ScrollController();
   final User? _currentUser = FirebaseAuth.instance.currentUser;
 
+  String _myNickname = '나';
   String _otherUserNickname = '상대방';
   late String otherUid;
 
   @override
   void initState() {
     super.initState();
+    _loadNicknames();
+  }
 
+  Future<void> _loadNicknames() async {
     final currentUid = _currentUser?.uid ?? '';
     final uids = widget.chatRoomId.split('_');
     otherUid = uids.firstWhere((uid) => uid != currentUid, orElse: () => '');
 
-    // 닉네임 가져오기
-    if (otherUid.isNotEmpty) {
-      FirebaseFirestore.instance.collection('users').doc(otherUid).get().then((doc) {
-        if (doc.exists && doc.data()!.containsKey('nickname')) {
-          setState(() {
-            _otherUserNickname = doc['nickname'];
-          });
-        }
+    // 내 닉네임
+    final myDoc = await FirebaseFirestore.instance.collection('users').doc(currentUid).get();
+    if (myDoc.exists && myDoc.data()!.containsKey('nickname')) {
+      _myNickname = myDoc['nickname'];
+    }
+
+    // 상대방 닉네임
+    final otherDoc = await FirebaseFirestore.instance.collection('users').doc(otherUid).get();
+    if (otherDoc.exists && otherDoc.data()!.containsKey('nickname')) {
+      setState(() {
+        _otherUserNickname = otherDoc['nickname'];
       });
     }
   }
 
   void _sendMessage() async {
-    final String message = _messageController.text.trim();
+    final message = _messageController.text.trim();
+    if (message.isEmpty || _currentUser == null) return;
 
-    if (message.isNotEmpty && _currentUser != null) {
-      FirebaseFirestore.instance
-          .collection('chatRooms')
-          .doc(widget.chatRoomId)
-          .collection('message')
-          .add({
-        'text': message,
-        'sender': _currentUser!.uid,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
+    final msgData = {
+      'text': message,
+      'sender': _currentUser!.uid,
+      'timestamp': FieldValue.serverTimestamp(),
+    };
 
-      _messageController.clear();
+    final chatRef = FirebaseFirestore.instance.collection('chatRooms').doc(widget.chatRoomId);
 
-      // 최신 메시지 정보 업데이트
-      await FirebaseFirestore.instance
-          .collection('chatRooms')
-          .doc(widget.chatRoomId)
-          .update({
-        'lastMessage': message,
-        'lastTime': FieldValue.serverTimestamp(),
-      });
+    await chatRef.collection('message').add(msgData);
+    await chatRef.update({
+      'lastMessage': message,
+      'lastTime': FieldValue.serverTimestamp(),
+    });
 
-      // 자동 스크롤
-      Future.delayed(Duration(milliseconds: 300), () {
+    _messageController.clear();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
         _scrollController.animateTo(
-          _scrollController.position.minScrollExtent,
+          _scrollController.position.maxScrollExtent,
           duration: Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
-      });
-    }
+      }
+    });
+  }
+
+  Widget _buildMessageItem(QueryDocumentSnapshot message) {
+    final senderUid = message['sender'];
+    final isMine = senderUid == _currentUser?.uid;
+    final nickname = isMine ? _myNickname : _otherUserNickname;
+
+    return Align(
+      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+        padding: EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isMine ? Colors.blue[200] : Colors.grey[300],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              message['text'],
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 4),
+            Text(
+              nickname,
+              style: TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -114,49 +148,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 return ListView.builder(
                   controller: _scrollController,
                   itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final message = messages[index];
-                    final isMine = message['sender'] == _currentUser?.uid;
-
-                    return Align(
-                      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: isMine ? Colors.blue[200] : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              message['text'],
-                              style: TextStyle(fontSize: 16),
-                            ),
-                            SizedBox(height: 4),
-                            FutureBuilder<DocumentSnapshot>(
-                              future: FirebaseFirestore.instance.collection('users').doc(message['sender']).get(),
-                              builder: (context, snapshot) {
-                                String senderNickname = '알 수 없음';
-                                if (snapshot.hasData && snapshot.data != null) {
-                                  final userData = snapshot.data!.data() as Map<String, dynamic>;
-                                  if (userData.containsKey('nickname')) {
-                                    senderNickname = userData['nickname'];
-                                  }
-                                }
-
-                                return Text(
-                                  senderNickname,
-                                  style: TextStyle(fontSize: 12, color: Colors.black54),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+                  itemBuilder: (context, index) =>
+                      _buildMessageItem(messages[index]),
                 );
               },
             ),
@@ -174,6 +167,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
+                    onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
                 SizedBox(width: 8),
