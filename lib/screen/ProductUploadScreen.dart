@@ -62,6 +62,7 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
         'sellerUid': FirebaseAuth.instance.currentUser!.uid,
         //'sellerEmail': uploaderEmail, //판매자 이메일 저장
         'sellerUid': FirebaseAuth.instance.currentUser!.uid,
+
       });
 
       // 문서 ID를 'productId' 필드로 업데이트 (firestore 문서ID저장)

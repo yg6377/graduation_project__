@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:graduation_project_1/screen/edit_profile_screen.dart';
 
 class MyPageScreen extends StatefulWidget {
 
@@ -62,9 +63,9 @@ class _MyPageScreenState extends State<MyPageScreen> {
                   // 프로필 이미지
                   CircleAvatar(
                     radius: 50,
-                    backgroundImage: NetworkImage(
-                      'https://via.placeholder.com/150', // 임시 프로필 이미지
-                    ),
+                    backgroundImage: _currentUser?.photoURL != null
+                        ? NetworkImage(_currentUser!.photoURL!)
+                        : NetworkImage('https://via.placeholder.com/150'),
                   ),
                   SizedBox(width: 16),
                   // 닉네임 수정
@@ -72,17 +73,24 @@ class _MyPageScreenState extends State<MyPageScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        TextField(
-                          controller: _nicknameController,
-                          decoration: InputDecoration(
-                            labelText: 'Nickname',
-                            border: OutlineInputBorder(),
-                          ),
+                        Text(
+                          _currentUser?.displayName ?? 'No nickname',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
                         ),
-                        SizedBox(height: 8),
+                        SizedBox(height: 15),
                         ElevatedButton(
-                          onPressed: _updateNickname,
-                          child: Text('Change nickname'),
+                          onPressed: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => EditProfileScreen()),
+                            );
+                            if (result == true) {
+                              setState(() {
+                                _nicknameController.text = FirebaseAuth.instance.currentUser?.displayName ?? '';
+                              });
+                            }
+                          },
+                          child: Text('Edit Profile'),
                         ),
                       ],
                     ),
@@ -90,96 +98,61 @@ class _MyPageScreenState extends State<MyPageScreen> {
                 ],
               ),
             ),
-            SizedBox(height: 20),
+            SizedBox(height: 30),
             Divider(thickness: 2),
-            // 좋아요 목록 제목
+            // 🔹 내 거래 영역
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "Like list",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "My Transactions",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () {
+                      // TODO: 내가 올린 게시글 리스트 페이지로 이동
+                    },
+                    child: Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                        child: Row(
+                          children: [
+                            Icon(Icons.list_alt, size: 28, color: Colors.blue),
+                            SizedBox(width: 12),
+                            Text("My Posts", style: TextStyle(fontSize: 16)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      // TODO: 좋아요 누른 게시글 리스트 페이지로 이동
+                    },
+                    child: Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                        child: Row(
+                          children: [
+                            Icon(Icons.favorite, size: 28, color: Colors.red),
+                            SizedBox(width: 12),
+                            Text("Favorite List", style: TextStyle(fontSize: 16)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            SizedBox(height: 8),
-            // 좋아요 누른 상품 리스트
-            StreamBuilder<QuerySnapshot>(
-              stream: _getLikedProducts(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                }
-
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text('There are no posts you have liked.'),
-                    ),
-                  );
-                }
-
-                final likedProducts = snapshot.data!.docs;
-
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(), // 내부 스크롤 비활성화
-                  itemCount: likedProducts.length,
-                  itemBuilder: (context, index) {
-                    final product = likedProducts[index];
-                    return Card(
-                      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      elevation: 2,
-                      child: Row(
-                        children: [
-                          // 상품 이미지
-                          Container(
-                            width: 100,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              image: DecorationImage(
-                                image: NetworkImage(
-                                  product['imageUrl'] ??
-                                      'https://via.placeholder.com/100',
-                                ),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 12),
-                          // 상품 정보
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  product['title'] ?? '제목 없음',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  product['price'] ?? '가격 정보 없음',
-                                  style: TextStyle(
-                                      fontSize: 14, color: Colors.grey[700]),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  '(내가 좋아요 누른 상품)',
-                                  style: TextStyle(
-                                      fontSize: 12, color: Colors.grey[600]),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+            SizedBox(height: 20),
           ],
         ),
       ),
