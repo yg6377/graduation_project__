@@ -92,6 +92,18 @@ class _MyPageScreenState extends State<MyPageScreen> {
                           },
                           child: Text('Edit Profile'),
                         ),
+                        SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: () async {
+                            await FirebaseAuth.instance.signOut();
+                            if (!mounted) return;
+                            Navigator.of(context).pushReplacementNamed('/login'); // replace with your actual login route
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                          ),
+                          child: Text('Logout'),
+                        ),
                       ],
                     ),
                   ),
@@ -100,7 +112,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
             ),
             SizedBox(height: 30),
             Divider(thickness: 2),
-            // 🔹 내 거래 영역
+            // 내 거래 영역
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Column(

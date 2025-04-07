@@ -67,11 +67,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 bool confirmed = await showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: Text('삭제 확인'),
-                    content: Text('정말 이 게시글을 삭제하시겠습니까?'),
+                    title: Text('Comfirm Delete'),
+                    content: Text('Are you sure delete your post?'),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(context, false), child: Text('취소')),
-                      TextButton(onPressed: () => Navigator.pop(context, true), child: Text('삭제')),
+                      TextButton(onPressed: () => Navigator.pop(context, false), child: Text('cancel')),
+                      TextButton(onPressed: () => Navigator.pop(context, true), child: Text('delete')),
                     ],
                   ),
                 );
@@ -84,7 +84,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 }
               } else if (value == 'report') {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('신고가 접수되었습니다.')),
+                  SnackBar(content: Text('Thank you! Your report has been received!')),
                 );
               }
             },
@@ -92,12 +92,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               final isOwner = FirebaseAuth.instance.currentUser?.uid == widget.sellerUid;
               if (isOwner) {
                 return [
-                  PopupMenuItem(value: 'edit', child: Text('수정')),
-                  PopupMenuItem(value: 'delete', child: Text('삭제')),
+                  PopupMenuItem(value: 'edit', child: Text('edit')),
+                  PopupMenuItem(value: 'delete', child: Text('delete')),
                 ];
               } else {
                 return [
-                  PopupMenuItem(value: 'report', child: Text('신고')),
+                  PopupMenuItem(value: 'report', child: Text('repport')),
                 ];
               }
             },
@@ -139,50 +139,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               widget.description,
               style: TextStyle(fontSize: 16),
             ),
-            SizedBox(height: 50),
-            if (FirebaseAuth.instance.currentUser?.uid == widget.sellerUid)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('수정 기능은 아직 미구현입니다.')),
-                      );
-                    },
-                    child: Text('수정'),
-                  ),
-                  SizedBox(width: 8),
-                  TextButton(
-                    onPressed: () async {
-                      bool confirmed = await showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: Text('삭제 확인'),
-                          content: Text('정말 이 게시글을 삭제하시겠습니까?'),
-                          actions: [
-                            TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: Text('취소')),
-                            TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: Text('삭제')),
-                          ],
-                        ),
-                      );
-
-                      if (confirmed) {
-                        await FirebaseFirestore.instance
-                            .collection('products')
-                            .doc(widget.productId)
-                            .delete();
-                        Navigator.pop(context);
-                      }
-                    },
-                    child: Text('삭제', style: TextStyle(color: Colors.red)),
-                  ),
-                ],
-              ),
           ],
         ),
       ),
@@ -235,7 +191,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                   if (myUid == sellerUid) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('자기 자신에게 메시지를 보낼 수 없습니다.')),
+                      SnackBar(content: Text('You can’t send a message to yourself.')),
                     );
                     return;
                   }
