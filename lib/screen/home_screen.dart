@@ -9,9 +9,7 @@ import 'package:graduation_project_1/screen/chatlist_Screen.dart';
 import 'package:graduation_project_1/screen/mypage_screen.dart';
 import 'package:graduation_project_1/firestore_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import 'package:graduation_project_1/screen/ProductUploadScreen.dart';
-import 'package:graduation_project_1/screen/productlist_screen.dart';
-import 'package:graduation_project_1/screen/productlist_screen.dart';
+import 'dart:math';
 
 void main() {
   runApp(MaterialApp(home: HomeScreen()));
@@ -87,15 +85,77 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'MY PAGE'),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // 상품 업로드 화면으로 이동
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => ProductUploadScreen()),
-          );
-        },
-        child: Icon(Icons.add),
+      floatingActionButton: Stack(
+        children: [
+          Align(
+            alignment: Alignment.bottomRight,
+            child: FloatingActionButton(
+              heroTag: 'uploadProduct',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ProductUploadScreen()),
+                );
+              },
+              child: Icon(Icons.add),
+              tooltip: 'Upload Product',
+            ),
+          ),
+          Positioned(
+            bottom: 5,
+            right: 80,
+            child: FloatingActionButton(
+              heroTag: 'generateTestData',
+              mini: true,
+              backgroundColor: Colors.orange,
+              onPressed: () async {
+                final usersSnapshot = await FirebaseFirestore.instance.collection('users').get();
+                final users = usersSnapshot.docs;
+
+                if (users.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('No users found to assign as sellers.')),
+                  );
+                  return;
+                }
+
+                final random = Random();
+                final sampleTitles = ['Laptop', 'Phone', 'Book', 'Chair', 'Shoes', 'Watch', 'Backpack', 'Keyboard', 'Monitor', 'Jacket'];
+                final sampleImages = [
+                  'https://picsum.photos/seed/item1/300',
+                  'https://picsum.photos/seed/item2/300',
+                  'https://picsum.photos/seed/item3/300',
+                  'https://picsum.photos/seed/item4/300',
+                  'https://picsum.photos/seed/item5/300',
+                ];
+
+                for (int i = 0; i < 5; i++) {
+                  final randomUser = users[random.nextInt(users.length)].data();
+                  final productName = sampleTitles[random.nextInt(sampleTitles.length)];
+                  final price = ((random.nextInt(96) + 5) * 100); 
+
+                  await FirebaseFirestore.instance.collection('products').add({
+                    'title': productName,
+                    'price': '$price NTD',
+                    'description': 'This is a sample description.',
+                    'imageUrl': sampleImages[random.nextInt(sampleImages.length)],
+                    'likes': 0,
+                    'timestamp': FieldValue.serverTimestamp(),
+                    'sellerEmail': randomUser['email'] ?? 'test@example.com',
+                    'sellerUid': users[random.nextInt(users.length)].id,
+                    'isTest': true,
+                  });
+                }
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Test products uploaded!')),
+                );
+              },
+              child: Text('Generate Test Data'),
+              tooltip: 'Generate Test Products',
+            ),
+          ),
+        ],
       ),
     );
   }
