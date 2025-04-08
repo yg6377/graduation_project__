@@ -97,7 +97,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ];
               } else {
                 return [
-                  PopupMenuItem(value: 'report', child: Text('repport')),
+                  PopupMenuItem(value: 'report', child: Text('report')),
                 ];
               }
             },
