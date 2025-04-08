@@ -33,7 +33,7 @@ class ProductListScreen extends StatelessWidget {
               final String title = productData['title'] ?? '';
               final String price = productData['price'] ?? '';
               final String imageUrl = productData['imageUrl'] ?? '';
-              final int likes = productData['likes'] ?? '';
+              final int likes = int.tryParse(productData['likes'].toString()) ?? 0;
               final String description = productData['description'] ?? '';
               final String sellerEmail = productData['sellerEmail'] ?? '';
               final String sellerUid = productData['sellerUid'] ?? '';
@@ -108,6 +108,9 @@ class ProductListScreen extends StatelessWidget {
                                         .doc(user?.uid);
 
                                     final productRef = FirebaseFirestore.instance.collection('products').doc(productId);
+
+                                    final likeDoc = await docRef.get();
+                                    final isLiked = likeDoc.exists;
 
                                     if (isLiked) {
                                       await docRef.delete();

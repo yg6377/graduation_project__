@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:graduation_project_1/screen/edit_profile_screen.dart';
+import 'package:graduation_project_1/screen/myposts_screen.dart';
+import 'package:graduation_project_1/screen/favoritelist_screen.dart';
 
 class MyPageScreen extends StatefulWidget {
 
@@ -125,7 +127,10 @@ class _MyPageScreenState extends State<MyPageScreen> {
                   SizedBox(height: 8),
                   GestureDetector(
                     onTap: () {
-                      // TODO: 내가 올린 게시글 리스트 페이지로 이동
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => MyPostsScreen()),
+                      );
                     },
                     child: Card(
                       elevation: 2,
@@ -144,7 +149,10 @@ class _MyPageScreenState extends State<MyPageScreen> {
                   ),
                   GestureDetector(
                     onTap: () {
-                      // TODO: 좋아요 누른 게시글 리스트 페이지로 이동
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => FavoriteListScreen()),
+                      );
                     },
                     child: Card(
                       elevation: 2,
