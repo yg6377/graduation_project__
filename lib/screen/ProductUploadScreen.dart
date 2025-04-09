@@ -1,8 +1,10 @@
-import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart'; // 숫자 입력 제한
 
 class ProductUploadScreen extends StatefulWidget {
   @override
@@ -10,15 +12,16 @@ class ProductUploadScreen extends StatefulWidget {
 }
 
 class _ProductUploadScreenState extends State<ProductUploadScreen> {
+  final TextEditingController titleController = TextEditingController();
+  final TextEditingController priceController = TextEditingController();
+  final TextEditingController descriptionController = TextEditingController();
+
   File? _image;
-  final picker = ImagePicker();
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _priceController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
 
-  // 갤러리에서 이미지 선택
-  Future pickImage() async {
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
+  /// 이미지 선택 함수
+  Future<void> _pickImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
         _image = File(pickedFile.path);
@@ -26,90 +29,100 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
     }
   }
 
-  // Firebase Storage에 이미지 업로드 후 URL 가져오기
-  Future<String?> uploadImageToStorage(File imageFile) async {
+  /// 상품 업로드 함수 (Firestore에 productId 필드 추가)
+  Future<void> _uploadProduct() async {
     try {
-      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
-      Reference storageRef =
-      FirebaseStorage.instance.ref().child('product_images/$fileName.jpg');
+      // 제목, 가격, 설명 기본값 처리
+      final user = FirebaseAuth.instance.currentUser; //판매자 이메일 저장
+      String? uploaderUid = user?.uid; //판매자 이메일 저장
 
-      UploadTask uploadTask = storageRef.putFile(imageFile);
-      TaskSnapshot snapshot = await uploadTask;
-      return await snapshot.ref.getDownloadURL(); // 업로드된 이미지 URL 반환
+      String title = titleController.text.isEmpty ? "No title" : titleController.text;
+      String price = priceController.text.isEmpty ? "Price unknown" : "${priceController.text} ";
+      String description = descriptionController.text.isEmpty ? "No description" : descriptionController.text;
+
+      // 이미지 업로드
+      String imageUrl = "";
+      if (_image != null) {
+        String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+        Reference storageRef = FirebaseStorage.instance.ref().child('product_images/$fileName.jpg');
+        UploadTask uploadTask = storageRef.putFile(_image!);
+        TaskSnapshot snapshot = await uploadTask;
+        imageUrl = await snapshot.ref.getDownloadURL();
+      }
+
+      // Firestore에 새 문서 생성
+      final docRef = await FirebaseFirestore.instance.collection('products').add({
+        'title': title,
+        'price': price,
+        'description': description,
+        'imageUrl': imageUrl,
+        'likes': 0, // 좋아요 초기값
+        'timestamp': FieldValue.serverTimestamp(),
+
+        'sellerUid': FirebaseAuth.instance.currentUser!.uid,
+        //'sellerEmail': uploaderEmail, //판매자 이메일 저장
+        'sellerUid': FirebaseAuth.instance.currentUser!.uid,
+
+      });
+
+      // 문서 ID를 'productId' 필드로 업데이트 (firestore 문서ID저장)
+      await docRef.update({
+        'productId': docRef.id,
+      });
+
+      // 업로드 완료 후 이전 화면으로 이동
+      Navigator.pop(context);
+
     } catch (e) {
-      print("이미지 업로드 실패: $e");
-      return null;
+      print("Error uploading product: $e");
     }
-  }
-
-  // Firestore에 상품 데이터 추가
-  Future<void> uploadProduct() async {
-    if (_titleController.text.isEmpty || _priceController.text.isEmpty || _image == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("모든 필드를 입력하고 이미지를 선택해주세요!")),
-      );
-      return;
-    }
-
-    String? imageUrl = await uploadImageToStorage(_image!);
-    if (imageUrl == null) return; // 이미지 업로드 실패 시 종료
-
-    await FirebaseFirestore.instance.collection('product').add({
-      'title': _titleController.text,
-      'price': _priceController.text,
-      'image': imageUrl, // Firestore에 이미지 URL 저장
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("상품이 업로드되었습니다!")),
-    );
-    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("상품 등록")),
+      appBar: AppBar(title: Text('Product Upload')),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // 이미지 선택 버튼
-            GestureDetector(
-              onTap: pickImage,
-              child: Container(
-                width: 150,
-                height: 150,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(8),
-                ),
+        padding: EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              GestureDetector(
+                onTap: _pickImage,
                 child: _image == null
-                    ? Icon(Icons.add_a_photo, size: 50, color: Colors.grey)
-                    : Image.file(_image!, fit: BoxFit.cover),
+                    ? Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.camera_alt, size: 40, color: Colors.black54),
+                )
+                    : Image.file(_image!, width: 100, height: 100),
               ),
-            ),
-            SizedBox(height: 16),
-            // 제목 입력
-            TextField(
-              controller: _titleController,
-              decoration: InputDecoration(labelText: "상품명"),
-            ),
-            SizedBox(height: 8),
-            // 가격 입력
-            TextField(
-              controller: _priceController,
-              decoration: InputDecoration(labelText: "가격"),
-              keyboardType: TextInputType.number,
-            ),
-            SizedBox(height: 16),
-            // Firestore 업로드 버튼
-            ElevatedButton(
-              onPressed: uploadProduct,
-              child: Text("상품 등록"),
-            ),
-          ],
+              SizedBox(height: 10),
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(labelText: 'Product Name'),
+              ),
+              TextField(
+                controller: priceController,
+                decoration: InputDecoration(labelText: 'Price (Numbers only)'),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+              TextField(
+                controller: descriptionController,
+                decoration: InputDecoration(labelText: 'Description'),
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _uploadProduct,
+                child: Text('Upload'),
+              ),
+            ],
+          ),
         ),
       ),
     );

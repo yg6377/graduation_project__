@@ -28,6 +28,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
         email: _emailController.text,
         password: _passwordController.text,
       );
+
+      // Firestore에 사용자 정보 저장
+      await FirebaseFirestore.instance.collection('users').doc(credential.user!.uid).set({
+        'email': _emailController.text,
+        'nickname': 'User${Random().nextInt(100000)}',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
       Navigator.pushReplacementNamed(context, '/home'); // 홈 화면으로 이동
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(

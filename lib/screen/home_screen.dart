@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'ProductUploadScreen.dart';
+import 'package:graduation_project_1/screen/productlist_screen.dart';
+import 'ProductDetailScreen.dart';
+import 'ProductUploadScreen.dart';
 import 'package:graduation_project_1/screen/chatlist_Screen.dart';
 import 'package:graduation_project_1/screen/mypage_screen.dart';
-//0304 push
+import 'package:graduation_project_1/firestore_service.dart';
+import 'package:timeago/timeago.dart' as timeago;
+import 'dart:math';
 
+void main() {
+  runApp(MaterialApp(home: HomeScreen()));
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,14 +23,27 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0; // 네비게이션 바 선택 인덱스
+  int _selectedIndex = 0;
 
-  // 네비게이션 탭 화면
+  // 🔹 탭마다 보여줄 페이지들
   final List<Widget> _pages = [
-    ProductListScreen(),  // 홈 화면
-    ChatListScreen(),         // 채팅 화면
+    ProductListScreen(),  // 홈 화면 (상품 목록)
+    ChatListScreen(),     // 채팅 화면
     MyPageScreen(),       // 마이페이지 화면
   ];
+
+  String _getAppBarTitle() {
+    switch (_selectedIndex) {
+      case 0:
+        return 'Home';
+      case 1:
+        return 'Chatting';
+      case 2:
+        return 'My Page';
+      default:
+        return 'Home';
+    }
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -29,175 +51,112 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // 뒤로가기 버튼 감지 및 동작
-  Future<bool> _onWillPop() async {
-    Navigator.pushReplacementNamed(context, '/login'); // 로그인 화면으로 이동
-    return false; // 뒤로가기 액션 취소
-  }
-
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _onWillPop, // 뒤로가기 감지
-      child: Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: false, // 기본 뒤로가기 버튼 제거
-          title: Row(
-            children: [
-              // 검색창
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: '현재지역(EX.송도동)',
-                    contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: () {
-                  // 검색 기능 구현
-                },
-                child: Text('검색'),
-              ),
-            ],
-          ),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back),
+    return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: Text(_getAppBarTitle()),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.search),
             onPressed: () {
-              Navigator.pushReplacementNamed(context, '/login'); // 로그인 화면으로 이동
+              Navigator.pushNamed(context, '/search');
             },
           ),
-          actions: [
-            IconButton(
-              icon: Icon(Icons.logout),
-              onPressed: () async {
-                await FirebaseAuth.instance.signOut(); // 로그아웃
-                Navigator.pushReplacementNamed(context, '/login');
+          IconButton(
+            icon: Icon(Icons.notifications),
+            onPressed: () {
+              Navigator.pushNamed(context, '/notification');
+            },
+          ),
+        ],
+      ),
+      body: _pages[_selectedIndex],
+
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        onTap: _onItemTapped,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'HOME'),
+          BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'CHATTING'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'MY PAGE'),
+        ],
+      ),
+      floatingActionButton: Stack(
+        children: [
+          Align(
+            alignment: Alignment.bottomRight,
+            child: FloatingActionButton(
+              heroTag: 'uploadProduct',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ProductUploadScreen()),
+                );
               },
+              child: Icon(Icons.add),
+              tooltip: 'Upload Product',
             ),
-          ],
-        ),
-        body: _pages[_selectedIndex],
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          selectedItemColor: Colors.blue,
-          unselectedItemColor: Colors.grey,
-          onTap: _onItemTapped,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'HOME'),
-            BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'CHATTING'),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'MY PAGE'),
-          ],
-        ),
+          ),
+          Positioned(
+            bottom: 5,
+            right: 80,
+            child: FloatingActionButton(
+              heroTag: 'generateTestData',
+              mini: true,
+              backgroundColor: Colors.orange,
+              onPressed: () async {
+                final usersSnapshot = await FirebaseFirestore.instance.collection('users').get();
+                final users = usersSnapshot.docs;
+
+                if (users.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('No users found to assign as sellers.')),
+                  );
+                  return;
+                }
+
+                final random = Random();
+                final sampleTitles = ['Laptop', 'Phone', 'Book', 'Chair', 'Shoes', 'Watch', 'Backpack', 'Keyboard', 'Monitor', 'Jacket'];
+                final sampleImages = [
+                  'https://picsum.photos/seed/item1/300',
+                  'https://picsum.photos/seed/item2/300',
+                  'https://picsum.photos/seed/item3/300',
+                  'https://picsum.photos/seed/item4/300',
+                  'https://picsum.photos/seed/item5/300',
+                ];
+
+                for (int i = 0; i < 5; i++) {
+                  final randomUser = users[random.nextInt(users.length)].data();
+                  final productName = sampleTitles[random.nextInt(sampleTitles.length)];
+                  final price = ((random.nextInt(96) + 5) * 100); 
+
+                  await FirebaseFirestore.instance.collection('products').add({
+                    'title': productName,
+                    'price': '$price NTD',
+                    'description': 'This is a sample description.',
+                    'imageUrl': sampleImages[random.nextInt(sampleImages.length)],
+                    'likes': 0,
+                    'timestamp': FieldValue.serverTimestamp(),
+                    'sellerEmail': randomUser['email'] ?? 'test@example.com',
+                    'sellerUid': users[random.nextInt(users.length)].id,
+                    'isTest': true,
+                  });
+                }
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Test products uploaded!')),
+                );
+              },
+              child: Text('Generate Test Data'),
+              tooltip: 'Generate Test Products',
+            ),
+          ),
+        ],
       ),
     );
   }
 }
-
-// 홈 화면의 상품 목록 화면
-class ProductListScreen extends StatelessWidget {
-  const ProductListScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('product').snapshots(), // Firestore 실시간 데이터 가져오기
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return Center(child: CircularProgressIndicator()); // 로딩 표시
-        }
-
-        var products = snapshot.data!.docs; // Firestore에서 가져온 문서 리스트
-
-        return ListView.builder(
-          itemCount: products.length,
-          itemBuilder: (context, index) {
-            var product = products[index];
-            var productData = product.data() as Map<String, dynamic>;
-
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 상품 이미지
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Image.network(
-                        productData['image'] ?? 'https://via.placeholder.com/150',
-                        width: 100,
-                        height: 100,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            Icon(Icons.image_not_supported, size: 100),
-                      ),
-                    ),
-                    // 제목과 가격
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              productData['title'] ?? '상품명 없음',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              productData['price'] ?? '가격 없음',
-                              style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-/*채팅 화면
-class ChatScreen extends StatelessWidget {
-  const ChatScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        '채팅 화면입니다.',
-        style: TextStyle(fontSize: 24),
-      ),
-    );
-  }
-}*/
-
-/*마이페이지 화면
-class MyPageScreen extends StatelessWidget {
-  const MyPageScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        '마이 페이지 화면입니다.',
-        style: TextStyle(fontSize: 24),
-      ),
-    );
-  }
-}*/

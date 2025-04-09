@@ -3,6 +3,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+  // Firestore에서 저장된 상품 목록을 가져오는 함수
+  Stream<List<Map<String, dynamic>>> getProducts() {
+    return _db.collection('products').orderBy('timestamp', descending: true).snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        var data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id; // Firestore 문서 ID 추가
+        return data;
+      }).toList();
+    });
+  }
+
   // 데이터 추가 (Create)
   Future<void> addUser(String name, int age, String city) async {
     await _db.collection('users').add({

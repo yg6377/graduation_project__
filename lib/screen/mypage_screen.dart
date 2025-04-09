@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:graduation_project_1/screen/edit_profile_screen.dart';
+import 'package:graduation_project_1/screen/myposts_screen.dart';
+import 'package:graduation_project_1/screen/favoritelist_screen.dart';
 
 class MyPageScreen extends StatefulWidget {
 
@@ -16,16 +19,23 @@ class _MyPageScreenState extends State<MyPageScreen> {
   void initState() {
     super.initState();
     // 초기 닉네임 설정
-    _nicknameController.text = _currentUser?.displayName ?? '닉네임 없음';
+    _nicknameController.text = _currentUser?.displayName ?? 'Enter your name';
   }
 
   // 닉네임 업데이트
   void _updateNickname() async {
     String newNickname = _nicknameController.text.trim();
-    if (newNickname.isNotEmpty) {
-      await _currentUser?.updateDisplayName(newNickname);
+    if (newNickname.isNotEmpty && _currentUser != null) {
+      await _currentUser!.updateDisplayName(newNickname);
+
+      // Firebase에서도 업데디트할 수 있게 바꿈.
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .update({'nickname': newNickname});
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('닉네임이 수정되었습니다.')),
+        SnackBar(content: Text('nickname successfully changed!')),
       );
       setState(() {});
     }
@@ -42,10 +52,6 @@ class _MyPageScreenState extends State<MyPageScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('마이페이지'),
-        centerTitle: true,
-      ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,9 +65,9 @@ class _MyPageScreenState extends State<MyPageScreen> {
                   // 프로필 이미지
                   CircleAvatar(
                     radius: 50,
-                    backgroundImage: NetworkImage(
-                      'https://via.placeholder.com/150', // 임시 프로필 이미지
-                    ),
+                    backgroundImage: _currentUser?.photoURL != null
+                        ? NetworkImage(_currentUser!.photoURL!)
+                        : NetworkImage('https://via.placeholder.com/150'),
                   ),
                   SizedBox(width: 16),
                   // 닉네임 수정
@@ -69,17 +75,36 @@ class _MyPageScreenState extends State<MyPageScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        TextField(
-                          controller: _nicknameController,
-                          decoration: InputDecoration(
-                            labelText: '닉네임 (수정 가능)',
-                            border: OutlineInputBorder(),
-                          ),
+                        Text(
+                          _currentUser?.displayName ?? 'No nickname',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                        ),
+                        SizedBox(height: 15),
+                        ElevatedButton(
+                          onPressed: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => EditProfileScreen()),
+                            );
+                            if (result == true) {
+                              setState(() {
+                                _nicknameController.text = FirebaseAuth.instance.currentUser?.displayName ?? '';
+                              });
+                            }
+                          },
+                          child: Text('Edit Profile'),
                         ),
                         SizedBox(height: 8),
                         ElevatedButton(
-                          onPressed: _updateNickname,
-                          child: Text('닉네임 수정'),
+                          onPressed: () async {
+                            await FirebaseAuth.instance.signOut();
+                            if (!mounted) return;
+                            Navigator.of(context).pushReplacementNamed('/login'); // replace with your actual login route
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                          ),
+                          child: Text('Logout'),
                         ),
                       ],
                     ),
@@ -87,96 +112,67 @@ class _MyPageScreenState extends State<MyPageScreen> {
                 ],
               ),
             ),
-            SizedBox(height: 20),
+            SizedBox(height: 30),
             Divider(thickness: 2),
-            // 좋아요 목록 제목
+            // 내 거래 영역
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "'좋아요' 목록",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "My Transactions",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => MyPostsScreen()),
+                      );
+                    },
+                    child: Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                        child: Row(
+                          children: [
+                            Icon(Icons.list_alt, size: 28, color: Colors.blue),
+                            SizedBox(width: 12),
+                            Text("My Posts", style: TextStyle(fontSize: 16)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => FavoriteListScreen()),
+                      );
+                    },
+                    child: Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                        child: Row(
+                          children: [
+                            Icon(Icons.favorite, size: 28, color: Colors.red),
+                            SizedBox(width: 12),
+                            Text("Favorite List", style: TextStyle(fontSize: 16)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            SizedBox(height: 8),
-            // 좋아요 누른 상품 리스트
-            StreamBuilder<QuerySnapshot>(
-              stream: _getLikedProducts(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                }
-
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text('좋아요를 누른 게시글이 없습니다.'),
-                    ),
-                  );
-                }
-
-                final likedProducts = snapshot.data!.docs;
-
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(), // 내부 스크롤 비활성화
-                  itemCount: likedProducts.length,
-                  itemBuilder: (context, index) {
-                    final product = likedProducts[index];
-                    return Card(
-                      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      elevation: 2,
-                      child: Row(
-                        children: [
-                          // 상품 이미지
-                          Container(
-                            width: 100,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              image: DecorationImage(
-                                image: NetworkImage(
-                                  product['imageUrl'] ??
-                                      'https://via.placeholder.com/100',
-                                ),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 12),
-                          // 상품 정보
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  product['title'] ?? '제목 없음',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  product['price'] ?? '가격 정보 없음',
-                                  style: TextStyle(
-                                      fontSize: 14, color: Colors.grey[700]),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  '(내가 좋아요 누른 상품)',
-                                  style: TextStyle(
-                                      fontSize: 12, color: Colors.grey[600]),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+            SizedBox(height: 20),
           ],
         ),
       ),

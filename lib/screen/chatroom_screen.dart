@@ -3,14 +3,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ChatRoomScreen extends StatefulWidget {
-  final String chatRoomId; // 채팅방 ID
-  final String userName; // 대화 상대 이름
+  final String chatRoomId;
+  final String userName;
+  final String productTitle;
+  final String productImageUrl;
+  final String productPrice;
 
   const ChatRoomScreen({
-    super.key,
+    Key? key,
     required this.chatRoomId,
     required this.userName,
-  });
+    required this.productTitle,
+    required this.productImageUrl,
+    required this.productPrice,
+  }) : super(key: key);
 
   @override
   State<ChatRoomScreen> createState() => _ChatRoomScreenState();
@@ -18,32 +24,106 @@ class ChatRoomScreen extends StatefulWidget {
 
 class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final TextEditingController _messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   final User? _currentUser = FirebaseAuth.instance.currentUser;
 
-  void _sendMessage() {
-    final String message = _messageController.text.trim();
+  String _myNickname = '나';
+  String _otherUserNickname = '상대방';
+  late String otherUid;
 
-    if (message.isNotEmpty && _currentUser != null) {
-      FirebaseFirestore.instance
-          .collection('chatRooms')
-          .doc(widget.chatRoomId)
-          .collection('messages')
-          .add({
-        'text': message,
-        'sender': _currentUser!.email,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
+  @override
+  void initState() {
+    super.initState();
+    _loadNicknames();
+  }
 
-      _messageController.clear(); // 입력창 초기화
+  Future<void> _loadNicknames() async {
+    final currentUid = _currentUser?.uid ?? '';
+    final uids = widget.chatRoomId.split('_');
+    otherUid = uids.firstWhere((uid) => uid != currentUid, orElse: () => '');
+
+    // 내 닉네임
+    final myDoc = await FirebaseFirestore.instance.collection('users').doc(currentUid).get();
+    if (myDoc.exists && myDoc.data()!.containsKey('nickname')) {
+      _myNickname = myDoc['nickname'];
     }
+
+    // 상대방 닉네임
+    final otherDoc = await FirebaseFirestore.instance.collection('users').doc(otherUid).get();
+    if (otherDoc.exists && otherDoc.data()!.containsKey('nickname')) {
+      setState(() {
+        _otherUserNickname = otherDoc['nickname'];
+      });
+    }
+  }
+
+  void _sendMessage() async {
+    final message = _messageController.text.trim();
+    if (message.isEmpty || _currentUser == null) return;
+
+    final msgData = {
+      'text': message,
+      'sender': _currentUser!.uid,
+      'timestamp': FieldValue.serverTimestamp(),
+    };
+
+    final chatRef = FirebaseFirestore.instance.collection('chatRooms').doc(widget.chatRoomId);
+
+    await chatRef.collection('message').add(msgData);
+    await chatRef.update({
+      'lastMessage': message,
+      'lastTime': FieldValue.serverTimestamp(),
+    });
+
+    _messageController.clear();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Widget _buildMessageItem(QueryDocumentSnapshot message) {
+    final senderUid = message['sender'];
+    final isMine = senderUid == _currentUser?.uid;
+    final nickname = isMine ? _myNickname : _otherUserNickname;
+
+    return Align(
+      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+        padding: EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isMine ? Colors.blue[200] : Colors.grey[300],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              message['text'],
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 4),
+            Text(
+              nickname,
+              style: TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.userName),
-      ),
+      appBar: AppBar(title: Text(_otherUserNickname)),
       body: Column(
         children: [
           Expanded(
@@ -51,8 +131,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               stream: FirebaseFirestore.instance
                   .collection('chatRooms')
                   .doc(widget.chatRoomId)
-                  .collection('messages')
-                  .orderBy('timestamp', descending: true)
+                  .collection('message')
+                  .orderBy('timestamp', descending: false)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -66,43 +146,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 final messages = snapshot.data!.docs;
 
                 return ListView.builder(
-                  reverse: true,
+                  controller: _scrollController,
                   itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final message = messages[index];
-                    final isMine =
-                        message['sender'] == _currentUser?.email; // 내가 보낸 메시지 확인
-
-                    return Align(
-                      alignment:
-                      isMine ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: EdgeInsets.symmetric(
-                            vertical: 4, horizontal: 12),
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color:
-                          isMine ? Colors.blue[200] : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              message['text'],
-                              style: TextStyle(fontSize: 16),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              message['sender'] ?? '',
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.black54),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+                  itemBuilder: (context, index) =>
+                      _buildMessageItem(messages[index]),
                 );
               },
             ),
@@ -120,6 +167,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
+                    onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
                 SizedBox(width: 8),

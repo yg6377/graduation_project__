@@ -1,68 +1,143 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'ProductDetailScreen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-// 홈 화면의 상품 목록 화면
 class ProductListScreen extends StatelessWidget {
-  const ProductListScreen({super.key});
+  const ProductListScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // 더미 데이터
-    final List<Map<String, String>> products = [
-      {'title': '아이폰 13', 'price': '800,000원', 'image': 'https://via.placeholder.com/150'},
-      {'title': '맥북 프로', 'price': '1,500,000원', 'image': 'https://via.placeholder.com/150'},
-      {'title': '갤럭시 S21', 'price': '700,000원', 'image': 'https://via.placeholder.com/150'},
-      {'title': '에어팟 프로', 'price': '200,000원', 'image': 'https://via.placeholder.com/150'},
-    ];
+    return Scaffold(
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('products').snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return Center(child: CircularProgressIndicator());
+          }
 
-    return ListView.builder(
-      itemCount: products.length,
-      itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 이미지
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Image.network(
-                    products[index]['image']!,
-                    width: 100,
-                    height: 100,
-                    fit: BoxFit.cover,
+          final products = snapshot.data!.docs;
+
+          return ListView.builder(
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+              final product = products[index];
+              final productData = product.data() as Map<String, dynamic>;
+
+              final timestampValue = productData['timestamp'];
+              final String timestampString = (timestampValue is Timestamp)
+                  ? timestampValue.toDate().toString()
+                  : '';
+
+              final String productId = productData['productId'] ?? product.id;
+              final String title = productData['title'] ?? '';
+              final String price = productData['price'] ?? '';
+              final String imageUrl = productData['imageUrl'] ?? '';
+              final int likes = int.tryParse(productData['likes'].toString()) ?? 0;
+              final String description = productData['description'] ?? '';
+              final String sellerEmail = productData['sellerEmail'] ?? '';
+              final String sellerUid = productData['sellerUid'] ?? '';
+
+              return Card(
+                margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Stack(
+                    children: [
+                      ListTile(
+                        leading: SizedBox(
+                          width: 80,
+                          height: 80,
+                          child: Center(
+                            child: imageUrl.isNotEmpty
+                                ? Image.network(imageUrl, fit: BoxFit.cover)
+                                : Image.asset('assets/images/no_image_pig.png', fit: BoxFit.cover),
+                          ),
+                        ),
+                        title: Text(title, style: TextStyle(fontSize: 18)),
+                        subtitle: Text(price, style: TextStyle(fontSize: 16)),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ProductDetailScreen(
+                                productId: productId,
+                                title: title,
+                                price: price,
+                                description: description,
+                                imageUrl: imageUrl,
+                                timestamp: timestampString,
+                                sellerEmail: sellerEmail,
+                                chatRoomId: '',
+                                userName: sellerEmail,
+                                sellerUid: sellerUid,
+                                productTitle: title,
+                                productImageUrl: imageUrl,
+                                productPrice: price,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      Positioned(
+                        bottom: 8,
+                        right: 8,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            FutureBuilder<DocumentSnapshot>(
+                              future: FirebaseFirestore.instance
+                                  .collection('products')
+                                  .doc(productId)
+                                  .collection('likes')
+                                  .doc(FirebaseAuth.instance.currentUser?.uid)
+                                  .get(),
+                              builder: (context, snapshot) {
+                                final isLiked = snapshot.data?.exists ?? false;
+                                return IconButton(
+                                  icon: Icon(
+                                    isLiked ? Icons.favorite : Icons.favorite_border,
+                                    color: isLiked ? Colors.red : Colors.grey,
+                                  ),
+                                  onPressed: () async {
+                                    final user = FirebaseAuth.instance.currentUser;
+                                    final docRef = FirebaseFirestore.instance
+                                        .collection('products')
+                                        .doc(productId)
+                                        .collection('likes')
+                                        .doc(user?.uid);
+
+                                    final productRef = FirebaseFirestore.instance.collection('products').doc(productId);
+
+                                    final likeDoc = await docRef.get();
+                                    final isLiked = likeDoc.exists;
+
+                                    if (isLiked) {
+                                      await docRef.delete();
+                                      await productRef.update({'likes': FieldValue.increment(-1)});
+                                    } else {
+                                      await docRef.set({'likedAt': Timestamp.now()});
+                                      await productRef.update({'likes': FieldValue.increment(1)});
+                                    }
+                                  },
+                                );
+                              },
+                            ),
+                            Text(
+                              '$likes',
+                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                // 제목과 가격
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          products[index]['title']!,
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          products[index]['price']!,
-                          style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

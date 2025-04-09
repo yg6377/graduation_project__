@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // 추가된 import
 import 'package:flutter/material.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -27,12 +28,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   /// 자동 로그인 (이전에 로그인한 계정 사용)
   Future<void> autoLogin() async {
-    final user = FirebaseAuth.instance.currentUser; //
+    final user = FirebaseAuth.instance.currentUser; // 자동 로그인 시 컬렉션에 UID 추가
     if (user != null) {
       Navigator.pushReplacementNamed(context, '/home');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('자동 로그인 불가능. 먼저 로그인하세요!')),
+        const SnackBar(content: Text('unable to auto login, login first!')),
       );
     }
   }
@@ -57,9 +58,8 @@ class _LoginScreenState extends State<LoginScreen> {
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: login,
-              child: Text('Login btn'),
+              child: Text('Login'),
             ),
-
 
             ElevatedButton(
               onPressed: () {
