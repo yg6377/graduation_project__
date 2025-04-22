@@ -2,15 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'ProductDetailScreen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
 class ProductListScreen extends StatelessWidget {
-  const ProductListScreen({Key? key}) : super(key: key);
+  final String? region;
+
+  const ProductListScreen({super.key, this.region});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('products').snapshots(),
+        stream: (region != null)
+            ? FirebaseFirestore.instance
+                .collection('products')
+                .where('region', isEqualTo: region)
+                .snapshots()
+            : FirebaseFirestore.instance.collection('products').snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return Center(child: CircularProgressIndicator());
@@ -55,7 +63,42 @@ class ProductListScreen extends StatelessWidget {
                           ),
                         ),
                         title: Text(title, style: TextStyle(fontSize: 18)),
-                        subtitle: Text(price, style: TextStyle(fontSize: 16)),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(price, style: TextStyle(fontSize: 16)),
+                            FutureBuilder<DocumentSnapshot>(
+                              future: FirebaseFirestore.instance.collection('users').doc(sellerUid).get(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState == ConnectionState.waiting) {
+                                  return Text('Loading user info...', style: TextStyle(fontSize: 12, color: Colors.grey));
+                                }
+                                if (!snapshot.hasData || !snapshot.data!.exists) {
+                                  return Text('Unknown user', style: TextStyle(fontSize: 12, color: Colors.grey));
+                                }
+
+                                final data = snapshot.data!.data() as Map<String, dynamic>;
+                                final nickname = data['nickname'] ?? 'Unknown';
+                                final region = data['region'] ?? 'Unknown';
+
+                                final timestamp = productData['timestamp'];
+                                String timeDisplay = '';
+                                if (timestamp is Timestamp) {
+                                  final date = timestamp.toDate();
+                                  final now = DateTime.now();
+                                  final difference = now.difference(date);
+
+                                  if (difference.inDays > 7) {
+                                    timeDisplay = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+                                  } else {
+                                    timeDisplay = timeago.format(date, locale: 'en');
+                                  }
+                                }
+                                return Text('$nickname - $region • $timeDisplay', style: TextStyle(fontSize: 12, color: Colors.grey));
+                              },
+                            ),
+                          ],
+                        ),
                         onTap: () {
                           Navigator.push(
                             context,

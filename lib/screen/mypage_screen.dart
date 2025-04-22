@@ -79,32 +79,54 @@ class _MyPageScreenState extends State<MyPageScreen> {
                           _currentUser?.displayName ?? 'No nickname',
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
                         ),
-                        SizedBox(height: 15),
-                        ElevatedButton(
-                          onPressed: () async {
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => EditProfileScreen()),
-                            );
-                            if (result == true) {
-                              setState(() {
-                                _nicknameController.text = FirebaseAuth.instance.currentUser?.displayName ?? '';
-                              });
+                        SizedBox(height: 5),
+                        FutureBuilder<DocumentSnapshot>(
+                          future: FirebaseFirestore.instance.collection('users').doc(_currentUser?.uid).get(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return Text("Your Location: ...", style: TextStyle(fontSize: 14, color: Colors.grey));
                             }
+                            if (snapshot.hasData && snapshot.data!.exists) {
+                              final region = snapshot.data!.get('region');
+                              return Text("Your Location: $region", style: TextStyle(fontSize: 14, color: Colors.grey));
+                            }
+                            return Text("Your Location: Unknown", style: TextStyle(fontSize: 14, color: Colors.grey));
                           },
-                          child: Text('Edit Profile'),
                         ),
-                        SizedBox(height: 8),
-                        ElevatedButton(
-                          onPressed: () async {
-                            await FirebaseAuth.instance.signOut();
-                            if (!mounted) return;
-                            Navigator.of(context).pushReplacementNamed('/login'); // replace with your actual login route
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                          ),
-                          child: Text('Logout'),
+                        SizedBox(height: 15),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => EditProfileScreen()),
+                                  );
+                                  if (result == true) {
+                                    setState(() {
+                                      _nicknameController.text = FirebaseAuth.instance.currentUser?.displayName ?? '';
+                                    });
+                                  }
+                                },
+                                child: Text('Edit Profile'),
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  await FirebaseAuth.instance.signOut();
+                                  if (!mounted) return;
+                                  Navigator.of(context).pushReplacementNamed('/login');
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                ),
+                                child: Text('Logout'),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

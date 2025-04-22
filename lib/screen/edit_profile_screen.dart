@@ -16,6 +16,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   File? _profileImage;
   final ImagePicker _picker = ImagePicker();
   String? _profileImageUrlFromDB;
+  String? _selectedRegion;
 
   @override
   void initState() {
@@ -35,10 +36,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       if (doc.exists) {
         final data = doc.data();
-        if (data != null && data['profileImageUrl'] != null) {
-          setState(() {
+        if (data != null) {
+          if (data['profileImageUrl'] != null) {
             _profileImageUrlFromDB = data['profileImageUrl'];
-          });
+          }
+          if (data['region'] != null) {
+            _selectedRegion = data['region'];
+          }
+          setState(() {});
         }
       }
     }
@@ -73,7 +78,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           .update({
         'nickname': newNickname,
         if (imageUrl != null) 'profileImageUrl': imageUrl,
+        if (_selectedRegion != null) 'region': _selectedRegion,
       });
+
+      // Update all products by this user
+      final userProducts = await FirebaseFirestore.instance
+          .collection('products')
+          .where('sellerUid', isEqualTo: _currentUser!.uid)
+          .get();
+
+      for (final doc in userProducts.docs) {
+        await doc.reference.update({'region': _selectedRegion});
+      }
 
       // Update FirebaseAuth user data
       await _currentUser!.updateDisplayName(newNickname);
@@ -119,6 +135,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 border: OutlineInputBorder(),
                 hintText: 'Enter new nickname',
               ),
+            ),
+            SizedBox(height: 20),
+            DropdownButtonFormField<String>(
+              value: _selectedRegion,
+              decoration: InputDecoration(
+                labelText: 'Region',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                'Taipei', 'New Taipei', 'Danshui', 'Keelung', 'Taoyuan',
+                'Hsinchu', 'Taichung', 'Kaohsiung', 'Tainan', 'Hualien'
+              ].map((region) {
+                return DropdownMenuItem(
+                  value: region,
+                  child: Text(region),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedRegion = value;
+                });
+              },
             ),
             SizedBox(height: 20),
             ElevatedButton(
