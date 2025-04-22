@@ -25,12 +25,33 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
+  String? _selectedRegion;
+
   // 🔹 탭마다 보여줄 페이지들
-  final List<Widget> _pages = [
-    ProductListScreen(),  // 홈 화면 (상품 목록)
-    ChatListScreen(),     // 채팅 화면
-    MyPageScreen(),       // 마이페이지 화면
-  ];
+  List<Widget> get _pages => [
+        ProductListScreen(region: _selectedRegion), // 홈 화면 (상품 목록)
+        ChatListScreen(), // 채팅 화면
+        MyPageScreen(), // 마이페이지 화면
+      ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserRegion();
+  }
+
+  Future<void> _loadUserRegion() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final regionFromUser = doc.data()?['region'];
+    if (_selectedRegion == null && regionFromUser != null) {
+      setState(() {
+        _selectedRegion = regionFromUser;
+      });
+    }
+  }
 
   String _getAppBarTitle() {
     switch (_selectedIndex) {
@@ -45,7 +66,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _onItemTapped(int index) {
+  void _onItemTapped(int index) async {
+    if (index == 0) {
+      await _loadUserRegion();
+    }
     setState(() {
       _selectedIndex = index;
     });
@@ -72,7 +96,65 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: _pages[_selectedIndex],
+      body: Column(
+        children: [
+          if (_selectedIndex == 0)
+            Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 12.0),
+                  child: GestureDetector(
+                    onTap: () async {
+                      final result = await showModalBottomSheet<String>(
+                        context: context,
+                        builder: (context) {
+                          return Container(
+                            padding: EdgeInsets.all(16),
+                            child: ListView(
+                              children: [
+                                'Taipei', 'New Taipei', 'Danshui', 'Keelung', 'Taoyuan',
+                                'Hsinchu', 'Taichung', 'Kaohsiung', 'Tainan', 'Hualien'
+                              ].map((region) {
+                                return ListTile(
+                                  title: Text(region),
+                                  onTap: () {
+                                    Navigator.pop(context, region);
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                          );
+                        },
+                      );
+                      if (result != null) {
+                        setState(() {
+                          _selectedRegion = result;
+                        });
+                      }
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Region: ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                        Text(
+                          _selectedRegion ?? '<Select Region>',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.blue,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                        Icon(Icons.arrow_drop_down),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 12),
+              ],
+            ),
+          Expanded(child: _pages[_selectedIndex]),
+        ],
+      ),
 
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
@@ -132,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 for (int i = 0; i < 5; i++) {
                   final randomUser = users[random.nextInt(users.length)].data();
                   final productName = sampleTitles[random.nextInt(sampleTitles.length)];
-                  final price = ((random.nextInt(96) + 5) * 100); 
+                  final price = ((random.nextInt(96) + 5) * 100);
 
                   await FirebaseFirestore.instance.collection('products').add({
                     'title': productName,
@@ -151,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   SnackBar(content: Text('Test products uploaded!')),
                 );
               },
-              child: Text('Generate Test Data'),
+              child: Text('Generate'),
               tooltip: 'Generate Test Products',
             ),
           ),
