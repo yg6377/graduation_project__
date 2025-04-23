@@ -10,22 +10,15 @@ class FavoriteListScreen extends StatelessWidget {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return [];
 
-    final likedProductIds = <String>[];
-
-    final likesSnapshot = await FirebaseFirestore.instance
-        .collectionGroup('likes')
-        .where('uid', isEqualTo: currentUser.uid)
+    final likedProductRefs = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('likedProducts')
         .get();
 
-    for (var likeDoc in likesSnapshot.docs) {
-      final productRef = likeDoc.reference.parent.parent;
-      if (productRef != null) {
-        likedProductIds.add(productRef.id);
-      }
-    }
-
     final productSnapshots = await Future.wait(
-      likedProductIds.map((productId) async {
+      likedProductRefs.docs.map((doc) async {
+        final productId = doc.id;
         final productDoc = await FirebaseFirestore.instance
             .collection('products')
             .doc(productId)
@@ -73,6 +66,7 @@ class FavoriteListScreen extends StatelessWidget {
                   leading: data['imageUrl'] != null && data['imageUrl'].isNotEmpty
                       ? Image.network(data['imageUrl'], width: 60, height: 60, fit: BoxFit.cover)
                       : Icon(Icons.image, size: 60),
+                  trailing: Icon(Icons.favorite, color: Colors.red),
                   onTap: () {
                     Navigator.push(
                       context,
