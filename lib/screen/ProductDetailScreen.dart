@@ -129,6 +129,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               '${widget.price}',
               style: TextStyle(fontSize: 20, color: Colors.blueAccent),
             ),
+            FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance.collection('users').doc(widget.sellerUid).get(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Text('Loading uploader info...', style: TextStyle(fontSize: 14, color: Colors.grey));
+                }
+                if (!snapshot.hasData || !snapshot.data!.exists) {
+                  return Text('Uploader: Unknown', style: TextStyle(fontSize: 14, color: Colors.grey));
+                }
+
+                final data = snapshot.data!.data() as Map<String, dynamic>;
+                final nickname = data['nickname'] ?? 'Unknown';
+
+                return Text('Uploader: $nickname', style: TextStyle(fontSize: 14, color: Colors.grey));
+              },
+            ),
+            
+            main
             SizedBox(height: 8),
             Text(
               'Uploaded by: ${widget.timestamp}',
