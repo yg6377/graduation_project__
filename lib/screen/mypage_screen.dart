@@ -128,6 +128,18 @@ class _MyPageScreenState extends State<MyPageScreen> {
                             ),
                           ],
                         ),
+                        SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: () async {
+                            await FirebaseAuth.instance.signOut();
+                            if (!mounted) return;
+                            Navigator.of(context).pushReplacementNamed('/login'); // replace with your actual login route
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                          ),
+                          child: Text('Logout'),
+                        ),
                       ],
                     ),
                   ),

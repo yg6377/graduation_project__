@@ -145,6 +145,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 return Text('Uploader: $nickname', style: TextStyle(fontSize: 14, color: Colors.grey));
               },
             ),
+            
+            main
             SizedBox(height: 8),
             Text(
               'Uploaded by: ${widget.timestamp}',

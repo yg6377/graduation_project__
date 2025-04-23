@@ -214,7 +214,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 for (int i = 0; i < 5; i++) {
                   final randomUser = users[random.nextInt(users.length)].data();
                   final productName = sampleTitles[random.nextInt(sampleTitles.length)];
+
                   final price = ((random.nextInt(96) + 5) * 100);
+
+                  final price = ((random.nextInt(96) + 5) * 100); 
+           main
 
                   await FirebaseFirestore.instance.collection('products').add({
                     'title': productName,
@@ -233,7 +237,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   SnackBar(content: Text('Test products uploaded!')),
                 );
               },
+
               child: Text('Generate'),
+
+              child: Text('Generate Test Data'),
+          main
               tooltip: 'Generate Test Products',
             ),
           ),

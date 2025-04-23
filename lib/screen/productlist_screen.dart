@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'ProductDetailScreen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:timeago/timeago.dart' as timeago;
+
+ main
 
 class ProductListScreen extends StatelessWidget {
   final String? region;
@@ -63,6 +66,7 @@ class ProductListScreen extends StatelessWidget {
                           ),
                         ),
                         title: Text(title, style: TextStyle(fontSize: 18)),
+
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -99,6 +103,9 @@ class ProductListScreen extends StatelessWidget {
                             ),
                           ],
                         ),
+
+                        subtitle: Text(price, style: TextStyle(fontSize: 16)),
+             main
                         onTap: () {
                           Navigator.push(
                             context,
