@@ -128,19 +128,20 @@ class ProductListScreen extends StatelessWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            // FutureBuilder: 로그인한 사용자가 이 상품을 좋아요 눌렀는지 확인
                             FutureBuilder<DocumentSnapshot>(
                               future: FirebaseFirestore.instance
                                   .collection('products')
-                                  .doc(productId)
+                                  .doc(productId) // 현재 상품 문서 ID
                                   .collection('likes')
-                                  .doc(FirebaseAuth.instance.currentUser?.uid)
+                                  .doc(FirebaseAuth.instance.currentUser?.uid) // 현재 로그인한 유저의 좋아요 여부
                                   .get(),
                               builder: (context, snapshot) {
-                                final isLiked = snapshot.data?.exists ?? false;
+                                final isLiked = snapshot.data?.exists ?? false; // 좋아요 문서가 있으면 이미 좋아요 누른 상태
                                 return IconButton(
                                   icon: Icon(
-                                    isLiked ? Icons.favorite : Icons.favorite_border,
-                                    color: isLiked ? Colors.red : Colors.grey,
+                                    isLiked ? Icons.favorite : Icons.favorite_border, // 상태에 따라 하트 아이콘 변경
+                                    color: isLiked ? Colors.red : Colors.grey, // 색상도 변경
                                   ),
                                   onPressed: () async {
                                     final user = FirebaseAuth.instance.currentUser;
@@ -148,24 +149,42 @@ class ProductListScreen extends StatelessWidget {
                                         .collection('products')
                                         .doc(productId)
                                         .collection('likes')
-                                        .doc(user?.uid);
+                                        .doc(user?.uid); // 좋아요 문서 참조
 
-                                    final productRef = FirebaseFirestore.instance.collection('products').doc(productId);
+                                    final productRef = FirebaseFirestore.instance.collection('products').doc(productId); // 상품 문서 참조
 
-                                    final likeDoc = await docRef.get();
+                                    final likeDoc = await docRef.get(); // 문서 존재 여부 확인
                                     final isLiked = likeDoc.exists;
 
                                     if (isLiked) {
-                                      await docRef.delete();
-                                      await productRef.update({'likes': FieldValue.increment(-1)});
+                                      // 이미 좋아요를 눌렀으면 → 좋아요 취소
+                                      await docRef.delete(); // 좋아요 문서 삭제
+                                      await productRef.update({'likes': FieldValue.increment(-1)}); // 상품 좋아요 수 -1
+                                      await FirebaseFirestore.instance
+                                          .collection('users')
+                                          .doc(user?.uid)
+                                          .collection('likedProducts')
+                                          .doc(productId)
+                                          .delete();
                                     } else {
-                                      await docRef.set({'likedAt': Timestamp.now()});
-                                      await productRef.update({'likes': FieldValue.increment(1)});
+                                      // 좋아요를 안 눌렀으면 → 좋아요 추가
+                                      await docRef.set({'likedAt': Timestamp.now()}); // 문서 생성
+                                      await productRef.update({'likes': FieldValue.increment(1)}); // 상품 좋아요 수 +1
+                                      await FirebaseFirestore.instance
+                                          .collection('users')
+                                          .doc(user?.uid)
+                                          .collection('likedProducts')
+                                          .doc(productId)
+                                          .set({
+                                            'productId': productId,
+                                            'likedAt': Timestamp.now(),
+                                          });
                                     }
                                   },
                                 );
                               },
                             ),
+                            // 좋아요 수 텍스트 표시
                             Text(
                               '$likes',
                               style: TextStyle(fontSize: 12, color: Colors.grey),
