@@ -45,6 +45,11 @@ dependencies:
   intl: ^0.18.1   # 날짜 포맷을 위한 intl 패키지
   timeago: ^3.5.0 # 상대적 시간 표시 (예: "5분 전")
 
+  firebase_messaging: ^15.2.5
+  http: ^0.13.6
+  overlay_support: ^1.2.1
+  another_flushbar: ^1.10.24
+
 
 
 dev_dependencies:
