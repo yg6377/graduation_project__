@@ -72,7 +72,7 @@ class ProductListScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(8),
                             child: imageUrl.isNotEmpty
                                 ? Image.network(imageUrl, fit: BoxFit.cover)
-                                : Image.asset('assets/images/sad image.png', fit: BoxFit.cover),
+                                : Image.asset('assets/images/no image.png', fit: BoxFit.cover),
                           ),
                         ),
                         title: Text(

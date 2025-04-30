@@ -166,7 +166,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 height: 300,
                 child: widget.imageUrl.isNotEmpty
                     ? Image.network(widget.imageUrl, fit: BoxFit.cover)
-                    : Image.asset('assets/images/sad image.png', fit: BoxFit.cover),
+                    : Image.asset('assets/images/no image.png', fit: BoxFit.cover),
               ),
             ),
             SizedBox(height: 16),
