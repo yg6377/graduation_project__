@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'ProductUploadScreen.dart';
 import 'package:graduation_project_1/screen/productlist_screen.dart';
 import 'ProductDetailScreen.dart';
-import 'ProductUploadScreen.dart';
 import 'package:graduation_project_1/screen/chatlist_Screen.dart';
 import 'package:graduation_project_1/screen/mypage_screen.dart';
 import 'package:graduation_project_1/firestore_service.dart';
@@ -214,7 +213,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 for (int i = 0; i < 5; i++) {
                   final randomUser = users[random.nextInt(users.length)].data();
                   final productName = sampleTitles[random.nextInt(sampleTitles.length)];
+
                   final price = ((random.nextInt(96) + 5) * 100);
+
+
 
                   await FirebaseFirestore.instance.collection('products').add({
                     'title': productName,
@@ -233,6 +235,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   SnackBar(content: Text('Test products uploaded!')),
                 );
               },
+
               child: Text('Generate'),
               tooltip: 'Generate Test Products',
             ),

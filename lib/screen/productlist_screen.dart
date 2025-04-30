@@ -39,12 +39,14 @@ class ProductListScreen extends StatelessWidget {
 
               final String productId = productData['productId'] ?? product.id;
               final String title = productData['title'] ?? '';
+              final String condition = productData['condition'] ?? '';
               final String price = productData['price'] ?? '';
               final String imageUrl = productData['imageUrl'] ?? '';
               final int likes = int.tryParse(productData['likes'].toString()) ?? 0;
               final String description = productData['description'] ?? '';
               final String sellerEmail = productData['sellerEmail'] ?? '';
               final String sellerUid = productData['sellerUid'] ?? '';
+              final String displayTitle = condition.isNotEmpty ? '[$condition] $title' : title;
 
               return Card(
                 margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -62,11 +64,14 @@ class ProductListScreen extends StatelessWidget {
                                 : Image.asset('assets/images/no_image_pig.png', fit: BoxFit.cover),
                           ),
                         ),
-                        title: Text(title, style: TextStyle(fontSize: 18)),
+                        title: Text(
+                          displayTitle,
+                          style: TextStyle(fontSize: 18),
+                        ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(price, style: TextStyle(fontSize: 16)),
+                            Text('$price NTD', style: TextStyle(fontSize: 16)),
                             FutureBuilder<DocumentSnapshot>(
                               future: FirebaseFirestore.instance.collection('users').doc(sellerUid).get(),
                               builder: (context, snapshot) {
@@ -105,7 +110,7 @@ class ProductListScreen extends StatelessWidget {
                             MaterialPageRoute(
                               builder: (context) => ProductDetailScreen(
                                 productId: productId,
-                                title: title,
+                                title: displayTitle,
                                 price: price,
                                 description: description,
                                 imageUrl: imageUrl,

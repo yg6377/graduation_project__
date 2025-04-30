@@ -58,10 +58,13 @@ class FavoriteListScreen extends StatelessWidget {
             itemCount: products.length,
             itemBuilder: (context, index) {
               final data = products[index].data() as Map<String, dynamic>;
+              final condition = data['condition'] ?? '';
+              final title = data['title'] ?? '';
+              final displayTitle = condition.isNotEmpty ? '[$condition] $title' : title;
               return Card(
                 margin: EdgeInsets.all(8),
                 child: ListTile(
-                  title: Text(data['title'] ?? ''),
+                  title: Text(displayTitle),
                   subtitle: Text((data['price'] ?? '').toString()),
                   leading: data['imageUrl'] != null && data['imageUrl'].isNotEmpty
                       ? Image.network(data['imageUrl'], width: 60, height: 60, fit: BoxFit.cover)
@@ -73,17 +76,18 @@ class FavoriteListScreen extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (context) => ProductDetailScreen(
                               productId: products[index].id,
-                          title: data['title'] ?? '',
+                          title: displayTitle,
                           price: (data['price'] ?? '').toString(),
                           description: data['description'] ?? '',
                           imageUrl: data['imageUrl'] ?? '',
                           timestamp: data['timestamp']?.toDate().toString() ?? '',
                           sellerUid: data['sellerUid'] ?? 'unknown',
                           sellerEmail: data['sellerUid'] ?? '',
-                          chatRoomId: '', userName: '',
-                          productTitle: '',
-                          productImageUrl: '',
-                          productPrice: '',
+                          chatRoomId: '',
+                          userName: '',
+                          productTitle: title,
+                          productImageUrl: data['imageUrl'] ?? '',
+                          productPrice: (data['price'] ?? '').toString(),
                         ),
                       ),
                     );

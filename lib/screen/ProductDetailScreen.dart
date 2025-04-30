@@ -46,7 +46,57 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: FutureBuilder<DocumentSnapshot>(
+          future: FirebaseFirestore.instance.collection('products').doc(widget.productId).get(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData || !snapshot.data!.exists) {
+              return Text('Product');
+            }
+            final data = snapshot.data!.data() as Map<String, dynamic>;
+            final saleStatus = data['saleStatus'] ?? 'selling';
+            String saleStatusText = 'Selling';
+            if (saleStatus == 'inProgress') {
+              saleStatusText = 'Reserved';
+            } else if (saleStatus == 'soldOut') {
+              saleStatusText = 'Sold Out';
+            }
+
+            final isOwner = FirebaseAuth.instance.currentUser?.uid == widget.sellerUid;
+
+            if (isOwner) {
+              return DropdownButton<String>(
+                value: saleStatus,
+                underline: SizedBox(),
+                dropdownColor: Colors.white,
+                style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
+                iconEnabledColor: Colors.black,
+                items: [
+                  DropdownMenuItem(value: 'selling', child: Text('Selling', style: TextStyle(color: Colors.black))),
+                  DropdownMenuItem(value: 'inProgress', child: Text('Reserved', style: TextStyle(color: Colors.black))),
+                  DropdownMenuItem(value: 'soldOut', child: Text('Sold Out', style: TextStyle(color: Colors.black))),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    FirebaseFirestore.instance
+                        .collection('products')
+                        .doc(widget.productId)
+                        .update({'saleStatus': value});
+                    setState(() {});
+                  }
+                },
+              );
+            } else {
+              return Text(
+                '<$saleStatusText>',
+                style: TextStyle(
+                  color: Colors.blueAccent,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 25,
+                ),
+              );
+            }
+          },
+        ),
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) async {
@@ -109,25 +159,50 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
+            Container(
+              width: double.infinity,
+              height: 400, // 원하는 높이 설정
               child: widget.imageUrl.isNotEmpty
                   ? Image.network(
-                widget.imageUrl,
-                width: 200,
-                height: 200,
-                fit: BoxFit.cover,
-              )
-                  : Icon(Icons.image, size: 200),
+                      widget.imageUrl,
+                      fit: BoxFit.cover,
+                    )
+                  : Icon(Icons.image, size: 100),
             ),
             SizedBox(height: 16),
-            Text(
-              widget.title,
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text(
-              '${widget.price}',
-              style: TextStyle(fontSize: 20, color: Colors.blueAccent),
+            FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance.collection('products').doc(widget.productId).get(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || !snapshot.data!.exists) {
+                  return SizedBox.shrink();
+                }
+
+                final data = snapshot.data!.data() as Map<String, dynamic>;
+                final saleStatus = data['saleStatus'] ?? 'selling';
+                final price = data['price'] ?? widget.price;
+                final condition = data['condition'] ?? '';
+
+                String saleStatusText;
+                if (saleStatus == 'selling') {
+                  saleStatusText = 'Selling';
+                } else if (saleStatus == 'inProgress') {
+                  saleStatusText = 'Reserved';
+                } else if (saleStatus == 'soldOut') {
+                  saleStatusText = 'Sold Out';
+                } else {
+                  saleStatusText = 'Selling';
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${widget.title}',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                );
+              },
             ),
             FutureBuilder<DocumentSnapshot>(
               future: FirebaseFirestore.instance.collection('users').doc(widget.sellerUid).get(),
@@ -141,8 +216,34 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                 final data = snapshot.data!.data() as Map<String, dynamic>;
                 final nickname = data['nickname'] ?? 'Unknown';
+                final profileImageUrl = data['image'] ?? '';
 
-                return Text('Uploader: $nickname', style: TextStyle(fontSize: 14, color: Colors.grey));
+                return Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.black),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      if (profileImageUrl.isNotEmpty)
+                        CircleAvatar(
+                          backgroundImage: NetworkImage(profileImageUrl),
+                          radius: 20,
+                        )
+                      else
+                        CircleAvatar(
+                          child: Icon(Icons.person),
+                          radius: 20,
+                        ),
+                      SizedBox(width: 8),
+                      Text(
+                        nickname,
+                        style: TextStyle(fontSize: 20, color: Colors.blueAccent),
+                      ),
+                    ],
+                  ),
+                );
               },
             ),
             SizedBox(height: 8),
@@ -159,92 +260,131 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ),
       ),
       bottomNavigationBar: Container(
-        padding: EdgeInsets.all(12),
+        padding: EdgeInsets.all(30),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('products')
-                    .doc(widget.productId)
-                    .collection('comments')
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  int commentCount = 0;
-                  if (snapshot.hasData) {
-                    commentCount = snapshot.data!.size;
-                  }
-                  return ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ProductCommentsScreen(
-                            productId: widget.productId,
-                          ),
-                        ),
-                      );
-                    },
-                    child: Text('Comments ($commentCount)'),
-                  );
-                },
-              ),
+            // 좋아요 버튼 + 가격
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.favorite_border),
+                  onPressed: () {
+                    // TODO: Implement like toggle logic
+                  },
+                ),
+                SizedBox(width: 5), // 아이콘과 구분선 사이 여백
+                Container(
+                  height: 20,
+                  width: 1,
+                  color: Colors.grey,
+                ),
+                SizedBox(width: 8), // 구분선과 가격 사이 여백
+                Text(
+                  '${widget.price} NTD',
+                  style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
-            SizedBox(width: 8),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () async {
-                  final currentUser = FirebaseAuth.instance.currentUser;
-                  if (currentUser == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('로그인이 필요합니다.')),
-                    );
-                    return;
-                  }
 
-                  final myUid = currentUser.uid;
-                  final sellerUid = widget.sellerUid;
-
-                  if (myUid == sellerUid) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('You can’t send a message to yourself.')),
-                    );
-                    return;
-                  }
-
-                  List<String> uids = [myUid, sellerUid]..sort();
-                  final chatRoomId = uids.join('_');
-
-                  final chatRef = FirebaseFirestore.instance
-                      .collection('chatRooms')
-                      .doc(chatRoomId);
-                  final chatSnapshot = await chatRef.get();
-
-                  if (!chatSnapshot.exists) {
-                    await chatRef.set({
-                      'participants': uids,
-                      'lastMessage': '',
-                      'lastTime': FieldValue.serverTimestamp(),
-                      'location': '',
-                      'profileImageUrl': '',
-                    });
-                  }
-
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ChatRoomScreen(
-                        chatRoomId: chatRoomId,
-                        userName: '', // 닉네임은 ChatRoomScreen 내에서 fetch
-                        productTitle: widget.title,
-                        productImageUrl: widget.imageUrl,
-                        productPrice: widget.price,
-                      ),
+            // 댓글 버튼
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('products')
+                  .doc(widget.productId)
+                  .collection('comments')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                int commentCount = 0;
+                if (snapshot.hasData) {
+                  commentCount = snapshot.data!.size;
+                }
+                return Stack(
+                  alignment: Alignment.topRight,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.comment),
+                      iconSize: 30,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProductCommentsScreen(
+                              productId: widget.productId,
+                            ),
+                          ),
+                        );
+                      },
                     ),
+                    if (commentCount > 0)
+                      CircleAvatar(
+                        radius: 10,
+                        backgroundColor: Colors.red,
+                        child: Text(
+                          '$commentCount',
+                          style: TextStyle(fontSize: 12, color: Colors.white),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+
+            // 메세지 버튼
+            IconButton(
+              icon: Icon(Icons.message),
+              iconSize: 30,
+              onPressed: () async {
+                final currentUser = FirebaseAuth.instance.currentUser;
+                if (currentUser == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Need to Login')),
                   );
-                },
-                child: Text('Send Message'),
-              ),
+                  return;
+                }
+
+                final myUid = currentUser.uid;
+                final sellerUid = widget.sellerUid;
+
+                if (myUid == sellerUid) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('You can’t send a message to yourself.')),
+                  );
+                  return;
+                }
+
+                List<String> uids = [myUid, sellerUid]..sort();
+                final chatRoomId = uids.join('_');
+
+                final chatRef = FirebaseFirestore.instance
+                    .collection('chatRooms')
+                    .doc(chatRoomId);
+                final chatSnapshot = await chatRef.get();
+
+                if (!chatSnapshot.exists) {
+                  await chatRef.set({
+                    'participants': uids,
+                    'lastMessage': '',
+                    'lastTime': FieldValue.serverTimestamp(),
+                    'location': '',
+                    'profileImageUrl': '',
+                  });
+                }
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ChatRoomScreen(
+                      chatRoomId: chatRoomId,
+                      userName: '',
+                      productTitle: widget.title,
+                      productImageUrl: widget.imageUrl,
+                      productPrice: widget.price,
+                    ),
+                  ),
+                );
+              },
             ),
           ],
         ),
