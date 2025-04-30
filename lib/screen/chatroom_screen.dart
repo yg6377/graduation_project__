@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:another_flushbar/flushbar.dart';
 
 class ChatRoomScreen extends StatefulWidget {
   final String chatRoomId;
@@ -26,6 +28,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final User? _currentUser = FirebaseAuth.instance.currentUser;
+  late StreamSubscription<QuerySnapshot> _msgSub;
 
   String _myNickname = '나';
   String _otherUserNickname = '상대방';
@@ -35,6 +38,46 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void initState() {
     super.initState();
     _loadNicknames();
+    _listenForNewMessages();
+  }
+
+  void _listenForNewMessages() {
+    final currentUid = _currentUser?.uid;
+    _msgSub = FirebaseFirestore.instance
+        .collection('chatRooms')
+        .doc(widget.chatRoomId)
+        .collection('message')
+        .orderBy('timestamp', descending: false)
+        .snapshots()
+        .skip(1)
+        .listen((snap) {
+      for (final change in snap.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          final data = change.doc.data() as Map<String, dynamic>;
+          final sender = data['sender'] as String;
+          final text = data['text'] as String;
+          if (sender != currentUid && mounted) {
+            // 인앱 배너 알림
+            Flushbar(
+              title: '새 메시지',
+              message: text,
+              duration: Duration(seconds: 3),
+              flushbarPosition: FlushbarPosition.TOP,
+              margin: EdgeInsets.all(8),
+              borderRadius: BorderRadius.circular(8),
+            ).show(context);
+          }
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _msgSub.cancel();
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadNicknames() async {
@@ -42,13 +85,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final uids = widget.chatRoomId.split('_');
     otherUid = uids.firstWhere((uid) => uid != currentUid, orElse: () => '');
 
-    // 내 닉네임
     final myDoc = await FirebaseFirestore.instance.collection('users').doc(currentUid).get();
     if (myDoc.exists && myDoc.data()!.containsKey('nickname')) {
       _myNickname = myDoc['nickname'];
     }
 
-    // 상대방 닉네임
     final otherDoc = await FirebaseFirestore.instance.collection('users').doc(otherUid).get();
     if (otherDoc.exists && otherDoc.data()!.containsKey('nickname')) {
       setState(() {
@@ -68,7 +109,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     };
 
     final chatRef = FirebaseFirestore.instance.collection('chatRooms').doc(widget.chatRoomId);
-
     await chatRef.collection('message').add(msgData);
     await chatRef.update({
       'lastMessage': message,
@@ -76,7 +116,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     });
 
     _messageController.clear();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -138,18 +177,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(child: CircularProgressIndicator());
                 }
-
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return Center(child: Text('대화가 없습니다.'));
                 }
-
                 final messages = snapshot.data!.docs;
-
                 return ListView.builder(
                   controller: _scrollController,
                   itemCount: messages.length,
-                  itemBuilder: (context, index) =>
-                      _buildMessageItem(messages[index]),
+                  itemBuilder: (context, index) => _buildMessageItem(messages[index]),
                 );
               },
             ),
@@ -163,9 +198,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     controller: _messageController,
                     decoration: InputDecoration(
                       hintText: '메시지 입력...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     onSubmitted: (_) => _sendMessage(),
                   ),
@@ -183,3 +216,4 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     );
   }
 }
+
