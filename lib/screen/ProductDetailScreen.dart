@@ -159,15 +159,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: double.infinity,
-              height: 400, // 원하는 높이 설정
-              child: widget.imageUrl.isNotEmpty
-                  ? Image.network(
-                      widget.imageUrl,
-                      fit: BoxFit.cover,
-                    )
-                  : Icon(Icons.image, size: 100),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                width: double.infinity,
+                height: 300,
+                child: widget.imageUrl.isNotEmpty
+                    ? Image.network(widget.imageUrl, fit: BoxFit.cover)
+                    : Image.asset('assets/images/sad image.png', fit: BoxFit.cover),
+              ),
             ),
             SizedBox(height: 16),
             FutureBuilder<DocumentSnapshot>(
@@ -219,27 +219,37 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 final profileImageUrl = data['image'] ?? '';
 
                 return Container(
-                  padding: EdgeInsets.all(8),
+                  margin: EdgeInsets.symmetric(vertical: 12),
+                  padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black),
-                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.2),
+                        spreadRadius: 2,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Row(
                     children: [
                       if (profileImageUrl.isNotEmpty)
                         CircleAvatar(
                           backgroundImage: NetworkImage(profileImageUrl),
-                          radius: 20,
+                          radius: 24,
                         )
                       else
                         CircleAvatar(
                           child: Icon(Icons.person),
-                          radius: 20,
+                          radius: 24,
                         ),
-                      SizedBox(width: 8),
+                      SizedBox(width: 10),
                       Text(
                         nickname,
-                        style: TextStyle(fontSize: 20, color: Colors.blueAccent),
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
@@ -260,7 +270,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ),
       ),
       bottomNavigationBar: Container(
-        padding: EdgeInsets.all(30),
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: Colors.grey.shade300)),
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
@@ -305,7 +319,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   children: [
                     IconButton(
                       icon: Icon(Icons.comment),
-                      iconSize: 30,
+                      iconSize: 36,
                       onPressed: () {
                         Navigator.push(
                           context,
@@ -319,7 +333,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                     if (commentCount > 0)
                       CircleAvatar(
-                        radius: 10,
+                        radius: 12,
                         backgroundColor: Colors.red,
                         child: Text(
                           '$commentCount',
@@ -334,7 +348,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             // 메세지 버튼
             IconButton(
               icon: Icon(Icons.message),
-              iconSize: 30,
+              iconSize: 36,
               onPressed: () async {
                 final currentUser = FirebaseAuth.instance.currentUser;
                 if (currentUser == null) {

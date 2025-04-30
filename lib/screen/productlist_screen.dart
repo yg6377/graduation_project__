@@ -48,20 +48,31 @@ class ProductListScreen extends StatelessWidget {
               final String sellerUid = productData['sellerUid'] ?? '';
               final String displayTitle = condition.isNotEmpty ? '[$condition] $title' : title;
 
-              return Card(
+              return Container(
                 margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
                 child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
+                  padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                   child: Stack(
                     children: [
                       ListTile(
-                        leading: SizedBox(
-                          width: 80,
-                          height: 80,
-                          child: Center(
+                        leading: AspectRatio(
+                          aspectRatio: 1,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
                             child: imageUrl.isNotEmpty
                                 ? Image.network(imageUrl, fit: BoxFit.cover)
-                                : Image.asset('assets/images/no_image_pig.png', fit: BoxFit.cover),
+                                : Image.asset('assets/images/sad image.png', fit: BoxFit.cover),
                           ),
                         ),
                         title: Text(
