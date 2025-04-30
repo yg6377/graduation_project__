@@ -1,18 +1,32 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+const admin = require("firebase-admin");
+const serviceAccount = require("./serviceAccountKey.json"); // Replace with your key file
 
-Future<void> updateAllPrices() async {
-  final snapshot = await FirebaseFirestore.instance.collection('products').get();
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
 
-  for (var doc in snapshot.docs) {
-    final data = doc.data();
-    final price = data['price'];
+const db = admin.firestore();
 
-    if (price is int || !price.toString().contains('NTD')) {
-      await doc.reference.update({
-        'price': '${price.toString()} NTD',
-      });
-    }
-  }
+// Manually defined product list with title and price
+const products = [
+  { title: "iPhone 13 Pro", price: 29900 },
+  { title: "Fleece Jacket", price: 990 },
+  { title: "MUJI Mug Set", price: 499 },
+  // Add more products as needed...
+];
 
-  print("✅ 가격 업데이트 완료!");
+async function uploadProducts() {
+  const batch = db.batch();
+  products.forEach((product) => {
+    const docRef = db.collection("products").doc(); // auto-generated ID
+    batch.set(docRef, {
+      ...product,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+  await batch.commit();
+  console.log("✅ All products uploaded successfully!");
 }
+
+uploadProducts().catch(console.error);
