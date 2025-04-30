@@ -302,53 +302,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ],
             ),
 
-            // 댓글 버튼
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('products')
-                  .doc(widget.productId)
-                  .collection('comments')
-                  .snapshots(),
-              builder: (context, snapshot) {
-                int commentCount = 0;
-                if (snapshot.hasData) {
-                  commentCount = snapshot.data!.size;
-                }
-                return Stack(
-                  alignment: Alignment.topRight,
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.comment),
-                      iconSize: 36,
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ProductCommentsScreen(
-                              productId: widget.productId,
-                            ),
-                          ),
-                        );
-                      },
+            // 댓글 버튼 (아이콘만 표시)
+            IconButton(
+              icon: Icon(Icons.mode_comment_outlined, size: 30),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProductCommentsScreen(
+                      productId: widget.productId,
                     ),
-                    if (commentCount > 0)
-                      CircleAvatar(
-                        radius: 12,
-                        backgroundColor: Colors.red,
-                        child: Text(
-                          '$commentCount',
-                          style: TextStyle(fontSize: 12, color: Colors.white),
-                        ),
-                      ),
-                  ],
+                  ),
                 );
               },
             ),
 
-            // 메세지 버튼
-            IconButton(
-              icon: Icon(Icons.message),
-              iconSize: 36,
+            // 메세지 버튼 ("Go Chat" 네모난 버튼)
+            ElevatedButton(
               onPressed: () async {
                 final currentUser = FirebaseAuth.instance.currentUser;
                 if (currentUser == null) {
@@ -371,9 +341,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 List<String> uids = [myUid, sellerUid]..sort();
                 final chatRoomId = uids.join('_');
 
-                final chatRef = FirebaseFirestore.instance
-                    .collection('chatRooms')
-                    .doc(chatRoomId);
+                final chatRef = FirebaseFirestore.instance.collection('chatRooms').doc(chatRoomId);
                 final chatSnapshot = await chatRef.get();
 
                 if (!chatSnapshot.exists) {
@@ -399,6 +367,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                 );
               },
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                backgroundColor: Colors.blueAccent,
+                foregroundColor: Colors.white,
+              ),
+              child: Text("Go Chat"),
             ),
           ],
         ),
