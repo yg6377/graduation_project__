@@ -7,17 +7,11 @@ import 'package:another_flushbar/flushbar.dart';
 class ChatRoomScreen extends StatefulWidget {
   final String chatRoomId;
   final String userName;
-  final String productTitle;
-  final String productImageUrl;
-  final String productPrice;
 
   const ChatRoomScreen({
     Key? key,
     required this.chatRoomId,
     required this.userName,
-    required this.productTitle,
-    required this.productImageUrl,
-    required this.productPrice,
   }) : super(key: key);
 
   @override
@@ -41,8 +35,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     _listenForNewMessages();
   }
 
+  @override
+  void dispose() {
+    _msgSub.cancel();
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   void _listenForNewMessages() {
-    final currentUid = _currentUser?.uid;
+    final meUid = _currentUser?.uid;
     _msgSub = FirebaseFirestore.instance
         .collection('chatRooms')
         .doc(widget.chatRoomId)
@@ -56,8 +58,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           final data = change.doc.data() as Map<String, dynamic>;
           final sender = data['sender'] as String;
           final text = data['text'] as String;
-          if (sender != currentUid && mounted) {
-            // 인앱 배너 알림
+          if (sender != meUid && mounted) {
             Flushbar(
               title: '새 메시지',
               message: text,
@@ -72,20 +73,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     });
   }
 
-  @override
-  void dispose() {
-    _msgSub.cancel();
-    _messageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
   Future<void> _loadNicknames() async {
-    final currentUid = _currentUser?.uid ?? '';
-    final uids = widget.chatRoomId.split('_');
-    otherUid = uids.firstWhere((uid) => uid != currentUid, orElse: () => '');
+    final meUid = _currentUser?.uid ?? '';
+    final parts = widget.chatRoomId.split('_');
+    otherUid = parts.firstWhere((u) => u != meUid, orElse: () => '');
 
-    final myDoc = await FirebaseFirestore.instance.collection('users').doc(currentUid).get();
+    final myDoc = await FirebaseFirestore.instance.collection('users').doc(meUid).get();
     if (myDoc.exists && myDoc.data()!.containsKey('nickname')) {
       _myNickname = myDoc['nickname'];
     }
@@ -98,20 +91,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     }
   }
 
-  void _sendMessage() async {
-    final message = _messageController.text.trim();
-    if (message.isEmpty || _currentUser == null) return;
-
-    final msgData = {
-      'text': message,
-      'sender': _currentUser!.uid,
-      'timestamp': FieldValue.serverTimestamp(),
-    };
+  Future<void> _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty || _currentUser == null) return;
 
     final chatRef = FirebaseFirestore.instance.collection('chatRooms').doc(widget.chatRoomId);
-    await chatRef.collection('message').add(msgData);
+
+    await chatRef.collection('message').add({
+      'text': text,
+      'sender': _currentUser!.uid,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+
     await chatRef.update({
-      'lastMessage': message,
+      'lastMessage': text,
       'lastTime': FieldValue.serverTimestamp(),
     });
 
@@ -127,9 +120,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     });
   }
 
-  Widget _buildMessageItem(QueryDocumentSnapshot message) {
-    final senderUid = message['sender'];
-    final isMine = senderUid == _currentUser?.uid;
+  Widget _buildMessageItem(QueryDocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    final isMine = data['sender'] == _currentUser?.uid;
     final nickname = isMine ? _myNickname : _otherUserNickname;
 
     return Align(
@@ -144,25 +137,68 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              message['text'],
-              style: TextStyle(fontSize: 16),
-            ),
+            Text(data['text'], style: TextStyle(fontSize: 16)),
             SizedBox(height: 4),
-            Text(
-              nickname,
-              style: TextStyle(fontSize: 12, color: Colors.black54),
-            ),
+            Text(nickname, style: TextStyle(fontSize: 12, color: Colors.black54)),
           ],
         ),
       ),
     );
   }
 
+  // 상품 헤더
+  Widget _productHeader() {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('chatRooms')
+          .doc(widget.chatRoomId)
+          .snapshots(),
+      builder: (ctx, snap) {
+        if (!snap.hasData || !snap.data!.exists) return SizedBox.shrink();
+        final data = snap.data!.data()! as Map<String, dynamic>;
+        final title = data['productTitle'] as String? ?? '';
+        final img = data['productImageUrl'] as String? ?? '';
+        final price = data['productPrice'] as String? ?? '';
+
+        if (title.isEmpty) return SizedBox.shrink();
+        return Container(
+          color: Colors.grey[100],
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              if (img.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.network(img, width: 50, height: 50, fit: BoxFit.cover),
+                ),
+              SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 4),
+                  Text('$price원',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[700])),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_otherUserNickname)),
+      appBar: AppBar(
+        title: Text(_otherUserNickname),
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(70),
+          child: _productHeader(),
+        ),
+      ),
       body: Column(
         children: [
           Expanded(
@@ -173,24 +209,24 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   .collection('message')
                   .orderBy('timestamp', descending: false)
                   .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+              builder: (ctx, snap) {
+                if (!snap.hasData) {
                   return Center(child: CircularProgressIndicator());
                 }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                final messages = snap.data!.docs;
+                if (messages.isEmpty) {
                   return Center(child: Text('대화가 없습니다.'));
                 }
-                final messages = snapshot.data!.docs;
                 return ListView.builder(
                   controller: _scrollController,
                   itemCount: messages.length,
-                  itemBuilder: (context, index) => _buildMessageItem(messages[index]),
+                  itemBuilder: (ctx, i) => _buildMessageItem(messages[i]),
                 );
               },
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: EdgeInsets.all(8),
             child: Row(
               children: [
                 Expanded(
@@ -204,10 +240,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   ),
                 ),
                 SizedBox(width: 8),
-                IconButton(
-                  icon: Icon(Icons.send, color: Colors.blue),
-                  onPressed: _sendMessage,
-                ),
+                IconButton(icon: Icon(Icons.send, color: Colors.blue), onPressed: _sendMessage),
               ],
             ),
           ),
@@ -216,4 +249,5 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     );
   }
 }
+
 

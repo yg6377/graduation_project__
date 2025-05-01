@@ -431,9 +431,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         return;
                       }
 
-                      final myUid = currentUser.uid;
+                      final myUid    = currentUser.uid;
                       final sellerUid = widget.sellerUid;
-
                       if (myUid == sellerUid) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('You can’t send a message to yourself.')),
@@ -441,19 +440,39 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         return;
                       }
 
+                      // 1) 채팅방 아이디 생성
                       List<String> uids = [myUid, sellerUid]..sort();
                       final chatRoomId = uids.join('_');
+                      final chatRef    = FirebaseFirestore.instance
+                          .collection('chatRooms')
+                          .doc(chatRoomId);
 
-                      final chatRef = FirebaseFirestore.instance.collection('chatRooms').doc(chatRoomId);
+                      // 2) 채팅방이 없으면, 상품 정보도 같이 읽어서 만든다
                       final chatSnapshot = await chatRef.get();
-
                       if (!chatSnapshot.exists) {
+                        // → 여기서 prodData 를 정의!
+                        final prodSnap = await FirebaseFirestore.instance
+                            .collection('products')
+                            .doc(widget.productId)
+                            .get();
+                        if (!prodSnap.exists) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('상품 정보를 불러올 수 없습니다.')),
+                          );
+                          return;
+                        }
+                        final prodData = prodSnap.data()! as Map<String, dynamic>;
+
                         await chatRef.set({
-                          'participants': uids,
-                          'lastMessage': '',
-                          'lastTime': FieldValue.serverTimestamp(),
-                          'location': '',
-                          'profileImageUrl': '',
+                          'participants'     : uids,
+                          'lastMessage'      : '',
+                          'lastTime'         : FieldValue.serverTimestamp(),
+                          'location'         : '',
+                          'profileImageUrl'  : '',
+                          'productId'        : widget.productId,
+                          'productTitle'     : prodData['title'] ?? '',
+                          'productImageUrl'  : prodData['imageUrl'] ?? '',
+                          'productPrice'     : prodData['price'].toString(),
                         });
                       }
 
@@ -462,10 +481,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         MaterialPageRoute(
                           builder: (_) => ChatRoomScreen(
                             chatRoomId: chatRoomId,
-                            userName: '',
-                            productTitle: widget.title,
-                            productImageUrl: widget.imageUrl,
-                            productPrice: widget.price,
+                            userName:   widget.userName,
+                            //productTitle: widget.title,
+                            //productImageUrl: widget.imageUrl,
+                            //productPrice: widget.price,
+
                           ),
                         ),
                       );

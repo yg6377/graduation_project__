@@ -8,8 +8,7 @@ class ChatListScreen extends StatelessWidget {
 
   String formatLastTime(Timestamp? timestamp) {
     if (timestamp == null) return "Just now";
-    final Duration diff = DateTime.now().difference(timestamp.toDate());
-
+    final diff = DateTime.now().difference(timestamp.toDate());
     if (diff.inMinutes < 1) return "Just now";
     if (diff.inHours < 1) return "${diff.inMinutes} minutes ago";
     if (diff.inHours < 24) return "${diff.inHours} hours ago";
@@ -21,12 +20,9 @@ class ChatListScreen extends StatelessWidget {
       final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
       if (doc.exists && doc.data()!.containsKey('nickname')) {
         return doc['nickname'];
-      } else {
-        return 'Not registered in database';
       }
-    } catch (e) {
-      return 'Not registered in database';
-    }
+    } catch (_) {}
+    return 'Unknown';
   }
 
   Future<void> _confirmAndDelete(BuildContext context, String chatRoomId) async {
@@ -34,14 +30,13 @@ class ChatListScreen extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         title: Text('채팅방 삭제'),
-        content: Text('정말로 이 채팅방을 삭제하시겠습니까?'),
+        content: Text('정말 삭제하시겠습니까?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: Text('취소')),
           TextButton(onPressed: () => Navigator.pop(context, true), child: Text('삭제')),
         ],
       ),
     );
-
     if (confirm == true) {
       await FirebaseFirestore.instance.collection('chatRooms').doc(chatRoomId).delete();
     }
@@ -49,86 +44,79 @@ class ChatListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return Scaffold(
-      body: StreamBuilder(
+      appBar: AppBar(title: Text('채팅 목록')),
+      body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('chatRooms').snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
 
           final docs = snapshot.data!.docs;
-          final Map<String, QueryDocumentSnapshot> uniqueChats = {};
-
+          final unique = <String, QueryDocumentSnapshot>{};
           for (var doc in docs) {
-            final data = doc.data() as Map<String, dynamic>;
-            final participants = List<String>.from(data['participants'] ?? []);
-            final otherUid = participants.firstWhere((uid) => uid != currentUid, orElse: () => '');
-            if (otherUid.isNotEmpty && !uniqueChats.containsKey(otherUid)) {
-              uniqueChats[otherUid] = doc;
+            final data = doc.data()! as Map<String, dynamic>;
+            final parts = List<String>.from(data['participants'] ?? []);
+            final other = parts.firstWhere((u) => u != currentUid, orElse: () => '');
+            if (other.isNotEmpty && !unique.containsKey(other)) {
+              unique[other] = doc;
             }
           }
-
-          final filteredDocs = uniqueChats.values.toList();
-
-          if (filteredDocs.isEmpty) return Center(child: Text("No chats available."));
+          final chats = unique.values.toList();
+          if (chats.isEmpty) return Center(child: Text("No chats available."));
 
           return ListView.builder(
-            itemCount: filteredDocs.length,
-            itemBuilder: (context, index) {
-              final doc = filteredDocs[index];
-              final data = doc.data() as Map<String, dynamic>;
-              final participants = List<String>.from(data['participants'] ?? []);
-              final otherUid = participants.firstWhere((uid) => uid != currentUid, orElse: () => '');
+            itemCount: chats.length,
+            itemBuilder: (context, idx) {
+              final doc = chats[idx];
+              final data = doc.data()! as Map<String, dynamic>;
+              final parts = List<String>.from(data['participants'] ?? []);
+              final otherUid = parts.firstWhere((u) => u != currentUid, orElse: () => '');
 
               return FutureBuilder<String>(
                 future: fetchNickname(otherUid),
-                builder: (context, snapshot) {
-                  final nickname = snapshot.data ?? 'Loading...';
-                  final region = data['region'] ?? 'No region info';
+                builder: (context, snapNick) {
+                  final nickname = snapNick.data ?? 'Loading...';
+                  final region = data['region'] ?? 'Unknown';
                   final lastMessage = data['lastMessage'] ?? '';
-                  final lastTime = data['lastTime'] as Timestamp?;
+                  final timeString = formatLastTime(data['lastTime'] as Timestamp?);
                   final profileImageUrl = data['profileImageUrl'] ?? '';
-                  final timeString = formatLastTime(lastTime);
 
-                  return Column(
-                    children: [
-                      Dismissible(
-                        key: ValueKey(doc.id),
-                        direction: DismissDirection.endToStart,
-                        confirmDismiss: (_) async {
-                          await _confirmAndDelete(context, doc.id);
-                          return false;
-                        },
-                        background: Container(
-                          color: Colors.red,
-                          alignment: Alignment.centerRight,
-                          padding: EdgeInsets.symmetric(horizontal: 20),
-                          child: Icon(Icons.delete, color: Colors.white),
-                        ),
-                        child: ListTile(
+                  return Dismissible(
+                    key: ValueKey(doc.id),
+                    direction: DismissDirection.endToStart,
+                    confirmDismiss: (_) async {
+                      await _confirmAndDelete(context, doc.id);
+                      return false;
+                    },
+                    background: Container(
+                      color: Colors.red,
+                      alignment: Alignment.centerRight,
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: Icon(Icons.delete, color: Colors.white),
+                    ),
+                    child: Column(
+                      children: [
+                        ListTile(
                           leading: CircleAvatar(
+                            radius: 25,
                             backgroundImage: profileImageUrl.isNotEmpty
                                 ? NetworkImage(profileImageUrl)
-                                : AssetImage('assets/images/default_profile.png') as ImageProvider,
-                            radius: 25,
+                                : AssetImage('assets/images/default_profile.png')
+                            as ImageProvider,
                           ),
                           title: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                '$nickname ($region)',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                timeString,
-                                style: TextStyle(fontSize: 12, color: Colors.grey),
-                              ),
+                              Text('$nickname ($region)',
+                                  style: TextStyle(fontWeight: FontWeight.bold)),
+                              Text(timeString,
+                                  style: TextStyle(fontSize: 12, color: Colors.grey)),
                             ],
                           ),
                           subtitle: Text(
                             lastMessage,
-                            style: TextStyle(fontSize: 13, color: Colors.black),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -139,17 +127,14 @@ class ChatListScreen extends StatelessWidget {
                                 builder: (_) => ChatRoomScreen(
                                   chatRoomId: doc.id,
                                   userName: nickname,
-                                  productTitle: '',
-                                  productImageUrl: '',
-                                  productPrice: '',
                                 ),
                               ),
                             );
                           },
                         ),
-                      ),
-                      Divider(height: 1, thickness: 2),
-                    ],
+                        Divider(height: 1, thickness: 2),
+                      ],
+                    ),
                   );
                 },
               );

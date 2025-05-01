@@ -46,8 +46,9 @@ android {
 
 // ── desugaring 라이브러리 추가 ──
 dependencies {
-    // 기존 implementation 종속성은 그대로 두세요
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.5"
+    implementation platform('com.google.firebase:firebase-bom:33.13.0') // BOM 추가 (버전 관리)
+    implementation 'com.google.firebase:firebase-messaging'
 }
 
 flutter {
