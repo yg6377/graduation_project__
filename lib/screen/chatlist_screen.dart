@@ -6,133 +6,142 @@ import 'chatroom_screen.dart';
 class ChatListScreen extends StatelessWidget {
   const ChatListScreen({Key? key}) : super(key: key);
 
-  String formatLastTime(Timestamp? timestamp) {
-    if (timestamp == null) return "Just now";
-    final diff = DateTime.now().difference(timestamp.toDate());
-    if (diff.inMinutes < 1) return "Just now";
-    if (diff.inHours < 1) return "${diff.inMinutes} minutes ago";
-    if (diff.inHours < 24) return "${diff.inHours} hours ago";
-    return "${diff.inDays} days ago";
+  String formatLastTime(Timestamp? ts) {
+    if (ts == null) return "";
+    final diff = DateTime.now().difference(ts.toDate());
+    if (diff.inMinutes < 1) return "방금 전";
+    if (diff.inHours   < 1) return "${diff.inMinutes}분 전";
+    if (diff.inHours   < 24) return "${diff.inHours}시간 전";
+    return "${diff.inDays}일 전";
   }
 
   Future<String> fetchNickname(String uid) async {
-    try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      if (doc.exists && doc.data()!.containsKey('nickname')) {
-        return doc['nickname'];
-      }
-    } catch (_) {}
-    return 'Unknown';
-  }
-
-  Future<void> _confirmAndDelete(BuildContext context, String chatRoomId) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('채팅방 삭제'),
-        content: Text('정말 삭제하시겠습니까?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('취소')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: Text('삭제')),
-        ],
-      ),
-    );
-    if (confirm == true) {
-      await FirebaseFirestore.instance.collection('chatRooms').doc(chatRoomId).delete();
-    }
+    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    return (doc.exists && doc.data()!.containsKey('nickname'))
+        ? doc['nickname'] as String
+        : "알 수 없음";
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final me = FirebaseAuth.instance.currentUser?.uid ?? "";
 
     return Scaffold(
+      appBar: AppBar(title: Text('채팅 목록')),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('chatRooms').snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+        builder: (ctx, snap) {
+          if (!snap.hasData) return Center(child: CircularProgressIndicator());
 
-          final docs = snapshot.data!.docs;
+          // 참가자 중복 제거
           final unique = <String, QueryDocumentSnapshot>{};
-          for (var doc in docs) {
+          for (var doc in snap.data!.docs) {
             final data = doc.data()! as Map<String, dynamic>;
             final parts = List<String>.from(data['participants'] ?? []);
-            final other = parts.firstWhere((u) => u != currentUid, orElse: () => '');
-            if (other.isNotEmpty && !unique.containsKey(other)) {
-              unique[other] = doc;
-            }
+            final other = parts.firstWhere((u) => u != me, orElse: () => "");
+            if (other.isNotEmpty) unique.putIfAbsent(other, () => doc);
           }
           final chats = unique.values.toList();
-          if (chats.isEmpty) return Center(child: Text("No chats available."));
+          if (chats.isEmpty) return Center(child: Text('채팅이 없습니다.'));
 
           return ListView.builder(
             itemCount: chats.length,
-            itemBuilder: (context, idx) {
-              final doc = chats[idx];
-              final data = doc.data()! as Map<String, dynamic>;
+            itemBuilder: (ctx, i) {
+              final doc   = chats[i];
+              final data  = doc.data()! as Map<String, dynamic>;
               final parts = List<String>.from(data['participants'] ?? []);
-              final otherUid = parts.firstWhere((u) => u != currentUid, orElse: () => '');
+              final otherUid = parts.firstWhere((u) => u != me, orElse: () => "");
+              final lastMsg  = data['lastMessage'] as String? ?? "";
+              final lastTime = formatLastTime(data['lastTime'] as Timestamp?);
+
+              // Map<dynamic,dynamic> → Map<String,dynamic> 안전 변환
+              final raw    = data['unreadCounts'] as Map<dynamic, dynamic>? ?? {};
+              final counts = Map<String, dynamic>.from(raw);
+              final unread = counts[me] as int? ?? 0;
+
+              final profileUrl = data['profileImageUrl'] as String? ?? "";
 
               return FutureBuilder<String>(
                 future: fetchNickname(otherUid),
-                builder: (context, snapNick) {
-                  final nickname = snapNick.data ?? 'Loading...';
-                  final region = data['region'] ?? 'Unknown';
-                  final lastMessage = data['lastMessage'] ?? '';
-                  final timeString = formatLastTime(data['lastTime'] as Timestamp?);
-                  final profileImageUrl = data['profileImageUrl'] ?? '';
-
+                builder: (ctx2, snapNick) {
+                  final nick = snapNick.data ?? "로딩중...";
                   return Dismissible(
                     key: ValueKey(doc.id),
                     direction: DismissDirection.endToStart,
-                    confirmDismiss: (_) async {
-                      await _confirmAndDelete(context, doc.id);
-                      return false;
-                    },
-                    background: Container(
-                      color: Colors.red,
-                      alignment: Alignment.centerRight,
-                      padding: EdgeInsets.symmetric(horizontal: 20),
-                      child: Icon(Icons.delete, color: Colors.white),
-                    ),
-                    child: Column(
-                      children: [
-                        ListTile(
-                          leading: CircleAvatar(
-                            radius: 25,
-                            backgroundImage: profileImageUrl.isNotEmpty
-                                ? NetworkImage(profileImageUrl)
-                                : AssetImage('assets/images/default_profile.png')
-                            as ImageProvider,
+                    onDismissed: (_) => FirebaseFirestore.instance
+                        .collection('chatRooms')
+                        .doc(doc.id)
+                        .delete(),
+                    background: Container(color: Colors.red),
+                    child: ListTile(
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,              // 셀 높이 줄임
+                      ),
+                      leading: CircleAvatar(
+                        radius: 24,
+                        backgroundImage: profileUrl.isNotEmpty
+                            ? NetworkImage(profileUrl)
+                            : AssetImage('assets/images/default_profile.png')
+                        as ImageProvider,
+                      ),
+                      title: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            nick,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
-                          title: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('$nickname ($region)',
-                                  style: TextStyle(fontWeight: FontWeight.bold)),
-                              Text(timeString,
-                                  style: TextStyle(fontSize: 12, color: Colors.grey)),
-                            ],
+                          Text(
+                            lastTime,
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
-                          subtitle: Text(
-                            lastMessage,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        ],
+                      ),
+                      subtitle: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              lastMsg,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ChatRoomScreen(
-                                  chatRoomId: doc.id,
-                                  userName: nickname,
+                          if (unread > 0)
+                            Container(
+                              width: 20,
+                              height: 20,
+                              margin: EdgeInsets.only(
+                                left: 8,
+                                top: 2,         // 숫자를 약간 더 아래로
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                '$unread',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
                                 ),
                               ),
-                            );
-                          },
+                            ),
+                        ],
+                      ),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChatRoomScreen(
+                            chatRoomId: doc.id,
+                            userName: nick,
+                          ),
                         ),
-                        Divider(height: 1, thickness: 2),
-                      ],
+                      ),
                     ),
                   );
                 },
@@ -144,3 +153,9 @@ class ChatListScreen extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
