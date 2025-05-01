@@ -4,7 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'ProductUploadScreen.dart';
-import 'package:graduation_project_1/screen/productlist_screen.dart' show ProductListScreen;
+import 'package:graduation_project_1/screen/productlist_screen.dart'; // Show 구문 제거
 import 'ProductDetailScreen.dart';
 import 'package:graduation_project_1/screen/chatlist_Screen.dart';
 import 'package:graduation_project_1/screen/mypage_screen.dart';
@@ -28,7 +28,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-
   String? _selectedRegion;
 
   @override
@@ -74,15 +73,27 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _changeRegion(String? newRegion) async {
+    if (newRegion != null && newRegion != _selectedRegion) {
+      setState(() {
+        _selectedRegion = newRegion;
+      });
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        await FirebaseFirestore.instance.collection('users').doc(uid).update({'region': newRegion});
+        print('🔥 사용자 지역 업데이트 완료: $newRegion');
+      }
+      setState(() {}); // To refresh ProductListScreen
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
-      _selectedRegion == null
-          ? Center(child: CircularProgressIndicator())
-          : ProductListScreen(
-              key: ValueKey(_selectedRegion),
-              region: _selectedRegion,
-            ),
+      ProductListScreen(
+        key: ValueKey(_selectedRegion),
+        region: _selectedRegion,
+      ),
       ChatListScreen(),
       MyPageScreen(),
     ];
@@ -92,59 +103,69 @@ class _HomeScreenState extends State<HomeScreen> {
         automaticallyImplyLeading: false,
         title: _selectedIndex == 0
             ? GestureDetector(
-                onTap: () async {
-                  final selected = await showDialog<String>(
-                    context: context,
-                    builder: (context) => SimpleDialog(
-                      title: Text('Select Region'),
-                      children: [
-                        SimpleDialogOption(
-                          onPressed: () => Navigator.pop(context, 'Danshui'),
-                          child: Text('Danshui'),
-                        ),
-                        SimpleDialogOption(
-                          onPressed: () => Navigator.pop(context, 'Taipei'),
-                          child: Text('Taipei'),
-                        ),
-                        SimpleDialogOption(
-                          onPressed: () => Navigator.pop(context, 'Kaohsiung'),
-                          child: Text('Kaohsiung'),
-                        ),
-                        SimpleDialogOption(
-                          onPressed: () => Navigator.pop(context, 'Taichung'),
-                          child: Text('Taichung'),
-                        ),
-                        SimpleDialogOption(
-                          onPressed: () => Navigator.pop(context, 'Tainan'),
-                          child: Text('Tainan'),
-                        ),
-                        SimpleDialogOption(
-                          onPressed: () => Navigator.pop(context, 'Hualien'),
-                          child: Text('Hualien'),
-                        ),
-                        SimpleDialogOption(
-                          onPressed: () => Navigator.pop(context, 'Keelung'),
-                          child: Text('Keelung'),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (selected != null) {
-                    setState(() {
-                      _selectedRegion = selected;
-                    });
-                  }
-                },
-                child: Row(
-                  children: [
-                    Text(
-                      _selectedRegion ?? '<Select Region>',
-                      style: TextStyle(color: Colors.blue, fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    Icon(Icons.arrow_drop_down, color: Colors.blue),
-                  ],
-                ),
-              )
+          onTap: () async {
+            final selected = await showDialog<String>(
+              context: context,
+              builder: (context) => SimpleDialog(
+                title: Text('Select Region'),
+                children: [
+                  SimpleDialogOption(
+                    onPressed: () => Navigator.pop(context, 'Danshui'),
+                    child: Text('Danshui'),
+                  ),
+                  SimpleDialogOption(
+                    onPressed: () => Navigator.pop(context, 'Taipei'),
+                    child: Text('Taipei'),
+                  ),
+                  SimpleDialogOption(
+                    onPressed: () => Navigator.pop(context, 'New Taipei'),
+                    child: Text('New Taipei'),
+                  ),
+                  SimpleDialogOption(
+                    onPressed: () => Navigator.pop(context, 'Kaohsiung'),
+                    child: Text('Kaohsiung'),
+                  ),
+                  SimpleDialogOption(
+                    onPressed: () => Navigator.pop(context, 'Taichung'),
+                    child: Text('Taichung'),
+                  ),
+                  SimpleDialogOption(
+                    onPressed: () => Navigator.pop(context, 'Tainan'),
+                    child: Text('Tainan'),
+                  ),
+                  SimpleDialogOption(
+                    onPressed: () => Navigator.pop(context, 'Hualien'),
+                    child: Text('Hualien'),
+                  ),
+                  SimpleDialogOption(
+                    onPressed: () => Navigator.pop(context, 'Keelung'),
+                    child: Text('Keelung'),
+                  ),
+                  SimpleDialogOption(
+                    onPressed: () => Navigator.pop(context, 'Taoyuan'),
+                    child: Text('Taoyuan'),
+                  ),
+                  SimpleDialogOption(
+                    onPressed: () => Navigator.pop(context, 'Hsinchu'),
+                    child: Text('Hsinchu'),
+                  ),
+                ],
+              ),
+            );
+            if (selected != null) {
+              await _changeRegion(selected);
+            }
+          },
+          child: Row(
+            children: [
+              Text(
+                _selectedRegion ?? '<Select Region>',
+                style: TextStyle(color: Colors.blue, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              Icon(Icons.arrow_drop_down, color: Colors.blue),
+            ],
+          ),
+        )
             : Text(_getAppBarTitle()),
         actions: [
           IconButton(
@@ -166,15 +187,10 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         children: [
           if (_selectedIndex == 0)
-            Column(
-              children: [
-                SizedBox(height: 12),
-              ],
-            ),
+            SizedBox(height: 12),
           Expanded(child: pages[_selectedIndex]),
         ],
       ),
-
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.blue,
@@ -193,11 +209,16 @@ class _HomeScreenState extends State<HomeScreen> {
             child: FloatingActionButton(
               heroTag: 'uploadProduct',
               onPressed: () async {
-                await Navigator.push(
+                final result = await Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => ProductUploadScreen()),
                 );
-                setState(() {});
+                // ProductUploadScreen에서 상품 업로드 후 HomeScreen으로 돌아올 때,
+                // 현재 지역의 상품 목록을 다시 로드하기 위해 setState를 호출합니다.
+                if (result != null && result == true) {
+                  // result가 true이면 상품 업로드가 완료되었음을 의미합니다.
+                  setState(() {});
+                }
               },
               child: Icon(Icons.add),
               tooltip: 'Upload Product',

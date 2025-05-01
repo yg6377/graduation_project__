@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'ProductDetailScreen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import 'home_screen.dart';
+import 'home_screen.dart'; // 필요 없을 수 있지만, 혹시 모를 참조를 위해 남겨둡니다.
 
 class ProductListScreen extends StatefulWidget {
   final String? region;
@@ -15,7 +15,7 @@ class ProductListScreen extends StatefulWidget {
 
 class _ProductListScreenState extends State<ProductListScreen> {
   List<DocumentSnapshot> _products = [];
-  bool _isLoading = true;
+  bool _isLoading = false; // initState에서 바로 로딩 시작
 
   @override
   void initState() {
@@ -27,6 +27,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
   void didUpdateWidget(covariant ProductListScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.region != oldWidget.region) {
+      print('📦 지역 변경 감지: ${oldWidget.region} -> ${widget.region}');
       setState(() {
         _isLoading = true;
         _products = [];
@@ -38,26 +39,38 @@ class _ProductListScreenState extends State<ProductListScreen> {
   Future<void> _loadRegionProducts() async {
     final region = widget.region;
     if (region == null) {
-      setState(() => _isLoading = false);
+      print('📦 지역이 선택되지 않음. 전체 상품 로드.');
+      setState(() {
+        _isLoading = true;
+        _products = [];
+      });
+      try {
+        final snap = await FirebaseFirestore.instance.collection('products').get();
+        print('📦 전체 상품 로드 완료: ${snap.docs.length}개');
+        setState(() {
+          _products = snap.docs;
+          _isLoading = false;
+        });
+      } catch (e) {
+        print('🔥 전체 상품 로딩 중 오류 발생: $e');
+        setState(() => _isLoading = false);
+      }
       return;
     }
+    print('📦 특정 지역 상품 로딩 시작: $region');
+    setState(() => _isLoading = true);
     try {
-      print('📦 지역 기반 상품 로딩 시작: ${widget.region}');
       final snap = await FirebaseFirestore.instance
           .collection('products')
           .where('region', isEqualTo: region)
           .get();
-      print('📦 로드된 상품 개수: ${snap.docs.length}');
-      for (var doc in snap.docs) {
-        final data = doc.data();
-        print(' - ${doc.id}: ${data['title']} [${data['region']}]');
-      }
+      print('📦 $region 지역 상품 로드 완료: ${snap.docs.length}개');
       setState(() {
         _products = snap.docs;
         _isLoading = false;
       });
     } catch (e) {
-      print('🔥 상품 로딩 중 오류 발생: $e');
+      print('🔥 $region 지역 상품 로딩 중 오류 발생: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -67,6 +80,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
     if (_isLoading) {
       return Scaffold(
         body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_products.isEmpty) {
+      return Scaffold(
+        body: Center(child: Text('해당 지역에 등록된 상품이 없습니다.')),
       );
     }
     return Scaffold(
@@ -188,7 +206,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // FutureBuilder: 로그인한 사용자가 이 상품을 좋아요 눌렀는지 확인 (users/{uid}/likedProducts/{productId})
                         FutureBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
                           future: (() {
                             final user = FirebaseAuth.instance.currentUser;

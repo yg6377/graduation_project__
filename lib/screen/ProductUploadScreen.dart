@@ -37,7 +37,7 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
       // Handle default values for title, price, description
       final user = FirebaseAuth.instance.currentUser; // Save seller UID
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(user?.uid).get();
-      final String region = userDoc.data()?['region'] ?? 'Unknown';
+      final String region = (userDoc.data()?['region'] ?? 'Unknown').toString().trim();
 
       String title = titleController.text.isEmpty ? "No title" : titleController.text;
       String price = priceController.text.isEmpty ? "Price unknown" : "${priceController.text} ";
