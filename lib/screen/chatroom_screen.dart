@@ -19,12 +19,15 @@ class ChatRoomScreen extends StatefulWidget {
 }
 
 class _ChatRoomScreenState extends State<ChatRoomScreen> {
+  // 초기 오프셋을 크게 줘서 리스트가 맨 아래(최신 메시지)에서 시작하도록 함
+  final ScrollController _scrollController =
+  ScrollController(initialScrollOffset: 1000000);
+
   final TextEditingController _messageController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
   final User? _currentUser = FirebaseAuth.instance.currentUser;
   late StreamSubscription<QuerySnapshot> _msgSub;
 
-  String _myNickname = '나';
+  String _myNickname        = '나';
   String _otherUserNickname = '상대방';
   late String otherUid;
 
@@ -53,15 +56,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         .snapshots()
         .skip(1)
         .listen((snap) {
-      for (final change in snap.docChanges) {
+      for (var change in snap.docChanges) {
         if (change.type == DocumentChangeType.added) {
-          final data = change.doc.data() as Map<String, dynamic>;
+          final data   = change.doc.data()! as Map<String, dynamic>;
           final sender = data['sender'] as String;
-          final text = data['text'] as String;
           if (sender != meUid && mounted) {
             Flushbar(
               title: '새 메시지',
-              message: text,
+              message: data['text'] as String,
               duration: Duration(seconds: 3),
               flushbarPosition: FlushbarPosition.TOP,
               margin: EdgeInsets.all(8),
@@ -76,7 +78,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   Future<void> _loadNicknames() async {
     final meUid = _currentUser?.uid ?? '';
     final parts = widget.chatRoomId.split('_');
-    otherUid = parts.firstWhere((u) => u != meUid, orElse: () => '');
+    otherUid    = parts.firstWhere((u) => u != meUid, orElse: () => '');
 
     final myDoc = await FirebaseFirestore.instance.collection('users').doc(meUid).get();
     if (myDoc.exists && myDoc.data()!.containsKey('nickname')) {
@@ -85,9 +87,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
     final otherDoc = await FirebaseFirestore.instance.collection('users').doc(otherUid).get();
     if (otherDoc.exists && otherDoc.data()!.containsKey('nickname')) {
-      setState(() {
-        _otherUserNickname = otherDoc['nickname'];
-      });
+      setState(() => _otherUserNickname = otherDoc['nickname']);
     }
   }
 
@@ -95,58 +95,65 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty || _currentUser == null) return;
 
-    final chatRef = FirebaseFirestore.instance.collection('chatRooms').doc(widget.chatRoomId);
+    final chatRef = FirebaseFirestore.instance
+        .collection('chatRooms')
+        .doc(widget.chatRoomId);
 
     await chatRef.collection('message').add({
-      'text': text,
-      'sender': _currentUser!.uid,
+      'text':      text,
+      'sender':    _currentUser!.uid,
       'timestamp': FieldValue.serverTimestamp(),
     });
-
     await chatRef.update({
       'lastMessage': text,
-      'lastTime': FieldValue.serverTimestamp(),
+      'lastTime':    FieldValue.serverTimestamp(),
     });
 
     _messageController.clear();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
   }
 
   Widget _buildMessageItem(QueryDocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data   = doc.data()! as Map<String, dynamic>;
     final isMine = data['sender'] == _currentUser?.uid;
-    final nickname = isMine ? _myNickname : _otherUserNickname;
+    final nick   = isMine ? _myNickname : _otherUserNickname;
+
+    // 시간 포맷
+    String timeString = '';
+    if (data['timestamp'] != null) {
+      final dt = (data['timestamp'] as Timestamp).toDate();
+      timeString = '${dt.hour.toString().padLeft(2,'0')}:'
+          '${dt.minute.toString().padLeft(2,'0')}';
+    }
 
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+        margin:  EdgeInsets.symmetric(vertical: 4, horizontal: 12),
         padding: EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: isMine ? Colors.blue[200] : Colors.grey[300],
+          color:       isMine ? Colors.blue[200] : Colors.grey[300],
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+          isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            Text(data['text'], style: TextStyle(fontSize: 16)),
+            Text(data['text'] as String, style: TextStyle(fontSize: 16)),
             SizedBox(height: 4),
-            Text(nickname, style: TextStyle(fontSize: 12, color: Colors.black54)),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(nick,       style: TextStyle(fontSize: 12, color: Colors.black54)),
+                SizedBox(width: 6),
+                Text(timeString, style: TextStyle(fontSize: 10, color: Colors.black45)),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  // 상품 헤더
   Widget _productHeader() {
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
@@ -155,31 +162,28 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           .snapshots(),
       builder: (ctx, snap) {
         if (!snap.hasData || !snap.data!.exists) return SizedBox.shrink();
-        final data = snap.data!.data()! as Map<String, dynamic>;
-        final title = data['productTitle'] as String? ?? '';
-        final img = data['productImageUrl'] as String? ?? '';
-        final price = data['productPrice'] as String? ?? '';
-
+        final data  = snap.data!.data()! as Map<String, dynamic>;
+        final title = data['productTitle']    as String? ?? '';
+        final img   = data['productImageUrl'] as String? ?? '';
+        final price = data['productPrice']    as String? ?? '';
         if (title.isEmpty) return SizedBox.shrink();
         return Container(
-          color: Colors.grey[100],
+          color:  Colors.grey[100],
           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
               if (img.isNotEmpty)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(6),
-                  child: Image.network(img, width: 50, height: 50, fit: BoxFit.cover),
+                  child: Image.network(img, width:50, height:50, fit:BoxFit.cover),
                 ),
-              SizedBox(width: 12),
+              SizedBox(width:12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 4),
-                  Text('$price원',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[700])),
+                  Text(title, style: TextStyle(fontSize:16, fontWeight: FontWeight.bold)),
+                  SizedBox(height:4),
+                  Text('$price원', style: TextStyle(fontSize:14, color:Colors.grey[700])),
                 ],
               ),
             ],
@@ -214,9 +218,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   return Center(child: CircularProgressIndicator());
                 }
                 final messages = snap.data!.docs;
-                if (messages.isEmpty) {
-                  return Center(child: Text('대화가 없습니다.'));
-                }
                 return ListView.builder(
                   controller: _scrollController,
                   itemCount: messages.length,
@@ -249,5 +250,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     );
   }
 }
+
+
+
+
 
 
