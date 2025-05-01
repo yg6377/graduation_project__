@@ -172,7 +172,8 @@ class ProductCard extends StatelessWidget {
 
 class ProductListScreen extends StatefulWidget {
   final String? region;
-  const ProductListScreen({Key? key, this.region}) : super(key: key);
+  final List<DocumentSnapshot>? recommendedProducts;
+  const ProductListScreen({Key? key, this.region, this.recommendedProducts}) : super(key: key);
 
   @override
   State<ProductListScreen> createState() => _ProductListScreenState();
@@ -334,42 +335,51 @@ class _ProductListScreenState extends State<ProductListScreen> {
         body: Center(child: Text('There are no products in this location')),
       );
     }
+
+    final showRecommended = widget.recommendedProducts != null && widget.recommendedProducts!.isNotEmpty;
+
     return Scaffold(
-      body: ListView.builder(
-        itemCount: _products.length,
-        itemBuilder: (context, index) {
-          final product = _products[index];
-          final productData = product.data() as Map<String, dynamic>;
+      body: ListView(
+        children: [
+          if (showRecommended) ...[
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Text('For you', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+            ...widget.recommendedProducts!.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final title = data['title'] ?? '';
+              final condition = data['condition'] ?? '';
+              final price = data['price'].toString();
+              final imageUrl = data['imageUrl'] ?? '';
+              final region = data['region'] ?? 'Unknown';
+              final saleStatus = data['saleStatus'] ?? '';
+              final productId = doc.id;
+              final description = data['description'] ?? '';
+              final sellerEmail = data['sellerEmail'] ?? '';
+              final sellerUid = data['sellerUid'] ?? '';
+              final timestampValue = data['timestamp'];
+              final String timestampString = (timestampValue is Timestamp)
+                  ? timestampValue.toDate().toString()
+                  : '';
 
-          final timestampValue = productData['timestamp'];
-          final String timestampString = (timestampValue is Timestamp)
-              ? timestampValue.toDate().toString()
-              : '';
-
-          final String productId = productData['productId'] ?? product.id;
-          final String title = productData['title'] ?? '';
-          final String condition = productData['condition'] ?? '';
-          final String price = productData['price'].toString();
-          final String imageUrl = productData['imageUrl'] ?? '';
-          final String description = productData['description'] ?? '';
-          final String sellerEmail = productData['sellerEmail'] ?? '';
-          final String sellerUid = productData['sellerUid'] ?? '';
-          final String displayTitle = title;
-
-          // region 값은 Firestore의 상품 데이터에 들어있는 region 사용
-          final String region = productData['region'] ?? 'Unknown';
-          final String saleStatus = productData['saleStatus'] ?? '';
-
-          return Stack(
-            children: [
-              GestureDetector(
+              return GestureDetector(
                 onTap: () async {
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user != null) {
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user.uid)
+                        .collection('clickedProducts')
+                        .doc(productId)
+                        .set({'clickedAt': Timestamp.now()});
+                  }
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => ProductDetailScreen(
                         productId: productId,
-                        title: displayTitle,
+                        title: title,
                         price: price,
                         description: description,
                         imageUrl: imageUrl,
@@ -387,100 +397,80 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   setState(() {});
                 },
                 child: ProductCard(
-                  title: displayTitle,
+                  title: title,
                   imageUrl: imageUrl,
                   price: price,
                   region: region,
                   saleStatus: saleStatus,
                   condition: condition,
                 ),
-              ),
-              Positioned(
-                bottom: 20,
-                right: 24,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    FutureBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
-                      future: (() {
-                        final user = FirebaseAuth.instance.currentUser;
-                        if (user == null) return Future<DocumentSnapshot<Map<String, dynamic>>?>.value(null);
-                        return FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(user.uid)
-                            .collection('likedProducts')
-                            .doc(productId)
-                            .get();
-                      })(),
-                      builder: (context, AsyncSnapshot<DocumentSnapshot<Map<String, dynamic>>?> snapshot) {
-                        final isLiked = snapshot.hasData && snapshot.data != null && snapshot.data?.exists == true;
-                        return IconButton(
-                          icon: Icon(
-                            isLiked ? Icons.favorite : Icons.favorite_border,
-                            color: isLiked ? Colors.red : Colors.grey,
-                          ),
-                          onPressed: () async {
-                            final user = FirebaseAuth.instance.currentUser;
-                            if (user == null) return;
-                            print('🛠️ [ListScreen] 좋아요 토글 시작: $productId');
-                            final productRef = FirebaseFirestore.instance.collection('products').doc(productId);
-                            final likeUserRef = FirebaseFirestore.instance
-                                .collection('users')
-                                .doc(user.uid)
-                                .collection('likedProducts')
-                                .doc(productId);
-                            final likeProductRef = FirebaseFirestore.instance
-                                .collection('products')
-                                .doc(productId)
-                                .collection('likes')
-                                .doc(user.uid);
-                            final likeUserDoc = await likeUserRef.get();
-                            final alreadyLiked = likeUserDoc.exists;
-                            print('🛠️ [ListScreen] 이전 좋아요 상태: $alreadyLiked');
-                            if (alreadyLiked) {
-                              // Unlike: Remove from both user and product collections, decrement counter
-                              await likeUserRef.delete();
-                              await likeProductRef.delete();
-                              await productRef.update({'likes': FieldValue.increment(-1)});
-                            } else {
-                              // Like: Add to both user and product collections, increment counter
-                              await likeUserRef.set({
-                                'productId': productId,
-                                'likedAt': Timestamp.now(),
-                              });
-                              await likeProductRef.set({'likedAt': Timestamp.now()});
-                              await productRef.update({'likes': FieldValue.increment(1)});
-                            }
-                            print('🛠️ [ListScreen] Firestore 좋아요 상태 변경 완료 for $productId');
-                            setState(() {});
-                          },
-                        );
-                      },
+              );
+            }).toList(),
+          ],
+          ...List.generate(_products.length, (index) {
+            final product = _products[index];
+            final productData = product.data() as Map<String, dynamic>;
+
+            final timestampValue = productData['timestamp'];
+            final String timestampString = (timestampValue is Timestamp)
+                ? timestampValue.toDate().toString()
+                : '';
+
+            final String productId = productData['productId'] ?? product.id;
+            final String title = productData['title'] ?? '';
+            final String condition = productData['condition'] ?? '';
+            final String price = productData['price'].toString();
+            final String imageUrl = productData['imageUrl'] ?? '';
+            final String description = productData['description'] ?? '';
+            final String sellerEmail = productData['sellerEmail'] ?? '';
+            final String sellerUid = productData['sellerUid'] ?? '';
+            final String region = productData['region'] ?? 'Unknown';
+            final String saleStatus = productData['saleStatus'] ?? '';
+
+            return GestureDetector(
+              onTap: () async {
+                final user = FirebaseAuth.instance.currentUser;
+                if (user != null) {
+                  await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(user.uid)
+                      .collection('clickedProducts')
+                      .doc(productId)
+                      .set({'clickedAt': Timestamp.now()});
+                }
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProductDetailScreen(
+                      productId: productId,
+                      title: title,
+                      price: price,
+                      description: description,
+                      imageUrl: imageUrl,
+                      timestamp: timestampString,
+                      sellerEmail: sellerEmail,
+                      chatRoomId: '',
+                      userName: sellerEmail,
+                      sellerUid: sellerUid,
+                      productTitle: title,
+                      productImageUrl: imageUrl,
+                      productPrice: price,
                     ),
-                    // 좋아요 수 텍스트 표시 (실시간 반영)
-                    StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                      stream: FirebaseFirestore.instance
-                          .collection('products')
-                          .doc(productId)
-                          .snapshots(),
-                      builder: (context, snapLikes) {
-                        int likeCount = 0;
-                        if (snapLikes.hasData && snapLikes.data!.exists) {
-                          final data = snapLikes.data!.data();
-                          likeCount = data?['likes'] is int ? data!['likes'] as int : 0;
-                        }
-                        return Text(
-                          '$likeCount',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        );
-                      },
-                    ),
-                  ],
-                ),
+                  ),
+                );
+                setState(() {});
+              },
+              child: ProductCard(
+                title: title,
+                imageUrl: imageUrl,
+                price: price,
+                region: region,
+                saleStatus: saleStatus,
+                condition: condition,
               ),
-            ],
-          );
-        },
+            );
+          }),
+        ],
       ),
     );
   }
