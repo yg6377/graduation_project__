@@ -140,6 +140,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final data = doc.data() as Map<String, dynamic>;
     final isSystem = data['sender'] == 'system';
     if (isSystem) {
+      final type = data['type'] ?? '';
+      final isReviewPrompt = type == 'review_prompt';
       return Padding(
         padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         child: Center(
@@ -149,13 +151,35 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               color: Colors.orange[100],
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Text(
-              data['text'],
-              style: TextStyle(
-                color: Colors.deepOrange[900],
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: isReviewPrompt
+                ? GestureDetector(
+                    onTap: () {
+                      // TODO: navigate to review screen
+                    },
+                    child: RichText(
+                      text: TextSpan(
+                        text: 'Did you have a good transaction with $_otherUserNickname? ',
+                        style: TextStyle(color: Colors.deepOrange[900]),
+                        children: [
+                          TextSpan(
+                            text: 'Leave a review.',
+                            style: TextStyle(
+                              decoration: TextDecoration.underline,
+                              color: Colors.deepOrange[900],
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : Text(
+                    data['text'],
+                    style: TextStyle(
+                      color: Colors.deepOrange[900],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
           ),
         ),
       );
@@ -274,80 +298,35 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                                           });
                                         }
                                         if (value == 'soldout') {
-                                          await showDialog(
-                                            context: context,
-                                            builder: (context) => AlertDialog(
-                                              title: Text('Transaction Confirmation'),
-                                              content: Text('Did you complete a transaction with this user?\nIf so, please leave a review!'),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () => Navigator.of(context).pop(),
-                                                  child: Text('No'),
-                                                ),
-                                                TextButton(
-                                                  onPressed: () {
-                                                    Navigator.of(context).pop();
-                                                    // Save to Firestore notifications
-                                                    await FirebaseFirestore.instance
-                                                        .collection('users')
-                                                        .doc(otherUid)
-                                                        .collection('notifications')
-                                                        .add({
-                                                      'type': 'transactionComplete',
-                                                      'from': _currentUser?.uid,
-                                                      'to': otherUid,
-                                                      'nickname': _myNickname,
-                                                      'message': '$_myNickname completed a transaction with you. Tap to leave a review!',
-                                                      'timestamp': FieldValue.serverTimestamp(),
-                                                      'read': false,
-                                                      'chatRoomId': widget.chatRoomId,
-                                                      'productId': productId,
-                                                    });
-                                                    // TODO: go to review page
-                                                  },
-                                                  child: Text('Yes'),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                          // Show Flushbar for buyer to review seller
-                                          if (_currentUser?.uid != sellerUid) {
-                                            Flushbar(
-                                              title: 'Transaction Complete',
-                                              message: 'Tap to confirm transaction and leave a review.',
-                                              mainButton: TextButton(
-                                                onPressed: () {
-                                                  Navigator.of(context).pop();
-                                                  showDialog(
-                                                    context: context,
-                                                    builder: (context) => AlertDialog(
-                                                      title: Text('Transaction Confirmation'),
-                                                      content: Text('Did you complete a transaction with this user?\nIf so, please leave a review!'),
-                                                      actions: [
-                                                        TextButton(
-                                                          onPressed: () => Navigator.of(context).pop(),
-                                                          child: Text('No'),
-                                                        ),
-                                                        TextButton(
-                                                          onPressed: () {
-                                                            Navigator.of(context).pop();
-                                                            // TODO: navigate to review screen
-                                                          },
-                                                          child: Text('Yes'),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  );
-                                                },
-                                                child: Text('Review', style: TextStyle(color: Colors.white)),
-                                              ),
-                                              duration: Duration(seconds: 5),
-                                              backgroundColor: Colors.green,
-                                              flushbarPosition: FlushbarPosition.TOP,
-                                              margin: EdgeInsets.all(8),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ).show(context);
-                                          }
+                                          final reviewPrompt = 'Did you have a good transaction with $_otherUserNickname? Leave a review. [Review]';
+
+                                          await FirebaseFirestore.instance
+                                              .collection('chatRooms')
+                                              .doc(widget.chatRoomId)
+                                              .collection('message')
+                                              .add({
+                                            'text': reviewPrompt,
+                                            'sender': 'system',
+                                            'timestamp': FieldValue.serverTimestamp(),
+                                            'type': 'review_prompt',
+                                          });
+
+                                          // Optional: Save review notification
+                                          await FirebaseFirestore.instance
+                                              .collection('users')
+                                              .doc(otherUid)
+                                              .collection('notifications')
+                                              .add({
+                                            'type': 'transactionComplete',
+                                            'from': _currentUser?.uid,
+                                            'to': otherUid,
+                                            'nickname': _myNickname,
+                                            'message': '$_myNickname completed a transaction with you. Tap to leave a review!',
+                                            'timestamp': FieldValue.serverTimestamp(),
+                                            'read': false,
+                                            'chatRoomId': widget.chatRoomId,
+                                            'productId': productId,
+                                          });
                                         }
                                       },
                                     )

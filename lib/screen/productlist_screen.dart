@@ -27,127 +27,130 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Color(0xFFF5FAFF),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0xFFB6DBF8).withOpacity(0.2),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 이미지
-          ClipRRect(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-            child: imageUrl.isNotEmpty
-                ? Image.network(
-                    imageUrl,
-                    height: 160,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  )
-                : Image.asset(
-                    'assets/images/huanhuan_no_image.png',
-                    height: 160,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-          ),
-          // 텍스트 내용
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    if (condition.isNotEmpty)
-                      Container(
-                        margin: EdgeInsets.only(right: 8),
-                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: _getConditionColor(condition),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          condition,
-                          style: TextStyle(color: Colors.white, fontSize: 12),
-                        ),
-                      ),
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 6),
-                Row(
-                  children: [
-                    if (saleStatus == 'reserved')
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: Color(0xFFDFF0FF),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'Reserved',
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                    if (saleStatus == 'soldout')
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: Color(0xFFEAEAEA),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'Sold Out',
-                          style: TextStyle(
-                            color: Colors.black54,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(Icons.place, size: 14, color: Colors.grey),
-                    SizedBox(width: 4),
-                    Text(
-                      region,
-                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 4),
-                Text(
-                  '$price NTD',
-                  style: TextStyle(color: Colors.blue, fontSize: 15),
-                ),
-              ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Color(0xFFF5FAFF),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0xFFB6DBF8).withOpacity(0.2),
+              spreadRadius: 1,
+              blurRadius: 10,
+              offset: Offset(0, 4),
             ),
-          ),
-        ],
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 이미지
+            ClipRRect(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+              child: imageUrl.isNotEmpty
+                  ? Image.network(
+                      imageUrl,
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    )
+                  : Image.asset(
+                      'assets/images/huanhuan_no_image.png',
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+            ),
+            // 텍스트 내용
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      if (condition.isNotEmpty)
+                        Container(
+                          margin: EdgeInsets.only(right: 8),
+                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _getConditionColor(condition),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            condition,
+                            style: TextStyle(color: Colors.white, fontSize: 12),
+                          ),
+                        ),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 6),
+                  Row(
+                    children: [
+                      if (saleStatus == 'reserved')
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Color(0xFFDFF0FF),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Reserved',
+                            style: TextStyle(
+                              color: Colors.blue,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                      if (saleStatus == 'soldout')
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Color(0xFFEAEAEA),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Sold Out',
+                            style: TextStyle(
+                              color: Colors.black54,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.place, size: 14, color: Colors.grey),
+                      SizedBox(width: 4),
+                      Text(
+                        region,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    '$price NTD',
+                    style: TextStyle(color: Colors.blue, fontSize: 15),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -372,7 +375,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 final title = data['title'] ?? '';
                 final condition = data['condition'] ?? '';
                 final price = data['price'].toString();
-                final imageUrl = data['imageUrl'] ?? '';
+                final imageUrl = (data['imageUrl'] ?? '').toString();
                 final region = data['region'] ?? 'Unknown';
                 final saleStatus = data['saleStatus'] ?? '';
                 final productId = doc.id;
@@ -395,6 +398,15 @@ class _ProductListScreenState extends State<ProductListScreen> {
                           .doc(productId)
                           .set({'clickedAt': Timestamp.now()});
                     }
+
+                    print('🟢 Product clicked: $title / $productId / $sellerUid');
+                    print('📸 imageUrl = "$imageUrl"');
+
+                    if (productId.isEmpty || title.isEmpty || sellerUid.isEmpty) {
+                      print('⚠️ 필수 데이터 누락. 이동 중단.');
+                      return;
+                    }
+
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -441,7 +453,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
               final String title = productData['title'] ?? '';
               final String condition = productData['condition'] ?? '';
               final String price = productData['price'].toString();
-              final String imageUrl = productData['imageUrl'] ?? '';
+              final String imageUrl = productData['imageUrl'] ?? 'assets/images/huanhuan_no_image.png';
               final String description = productData['description'] ?? '';
               final String sellerEmail = productData['sellerEmail'] ?? '';
               final String sellerUid = productData['sellerUid'] ?? '';

@@ -193,7 +193,7 @@ class SearchResultScreen extends StatelessWidget {
             final productData = product.data() as Map<String, dynamic>;
 
             final String title = productData['title'] ?? '';
-            final String imageUrl = productData['imageUrl'] ?? '';
+            final String imageUrl = (productData['imageUrl'] ?? '').toString();
             final String price = productData['price']?.toString() ?? '';
             final String region = productData['region'] ?? '';
             final String saleStatus = productData['saleStatus'] ?? '';
@@ -214,27 +214,39 @@ class SearchResultScreen extends StatelessWidget {
                 final String description = productData['description'] ?? '';
                 final String sellerEmail = productData['sellerEmail'] ?? '';
                 final String condition = productData['condition'] ?? '';
+                final String sellerUid = productData['sellerUid'] ?? '';
 
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ProductDetailScreen(
-                      productId: productId,
-                      title: title,
-                      price: price,
-                      description: description,
-                      imageUrl: imageUrl,
-                      timestamp: timestampString,
-                      sellerEmail: sellerEmail,
-                      chatRoomId: '',                // 필수니까 빈값으로라도 채움
-                      userName: sellerEmail,                  // 추후 로그인 유저로 넘겨도 됨
-                      sellerUid: product['sellerUid'],
-                      productTitle: title,
-                      productImageUrl: imageUrl,
-                      productPrice: price,
+                print('🟢 Product clicked: $title / $productId / $sellerUid');
+
+                if (productId.isEmpty || title.isEmpty || sellerUid.isEmpty) {
+                  print('⚠️ 필수 데이터 누락. 이동 중단.');
+                  return;
+                }
+
+                try {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProductDetailScreen(
+                        productId: productId,
+                        title: title,
+                        price: price,
+                        description: description,
+                        imageUrl: imageUrl,
+                        timestamp: timestampString,
+                        sellerEmail: sellerEmail,
+                        chatRoomId: '',
+                        userName: sellerEmail,
+                        sellerUid: sellerUid,
+                        productTitle: title,
+                        productImageUrl: imageUrl,
+                        productPrice: price,
+                      ),
                     ),
-                  ),
-                );
+                  );
+                } catch (e) {
+                  print('❌ Navigator.push failed: $e');
+                }
               }, condition: '',
             );
           },
