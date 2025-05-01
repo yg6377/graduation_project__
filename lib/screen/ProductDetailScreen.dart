@@ -108,6 +108,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.productId.trim().isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: Text('Error')),
+        body: Center(
+          child: Text(
+            '⚠️ Invalid product. No product ID provided.',
+            style: TextStyle(fontSize: 16, color: Colors.red),
+          ),
+        ),
+      );
+    }
     final isOwner = FirebaseAuth.instance.currentUser?.uid == widget.sellerUid;
     return Scaffold(
 
