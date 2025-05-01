@@ -339,29 +339,95 @@ class _ProductListScreenState extends State<ProductListScreen> {
     final showRecommended = widget.recommendedProducts != null && widget.recommendedProducts!.isNotEmpty;
 
     return Scaffold(
-      body: ListView(
-        children: [
-          if (showRecommended) ...[
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Text('For you', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ),
-            ...widget.recommendedProducts!.map((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              final title = data['title'] ?? '';
-              final condition = data['condition'] ?? '';
-              final price = data['price'].toString();
-              final imageUrl = data['imageUrl'] ?? '';
-              final region = data['region'] ?? 'Unknown';
-              final saleStatus = data['saleStatus'] ?? '';
-              final productId = doc.id;
-              final description = data['description'] ?? '';
-              final sellerEmail = data['sellerEmail'] ?? '';
-              final sellerUid = data['sellerUid'] ?? '';
-              final timestampValue = data['timestamp'];
+      body: Container(
+        color: Color(0xFFEAF6FF),
+        child: ListView(
+          children: [
+            if (showRecommended) ...[
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Text('For you', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+              ...widget.recommendedProducts!.map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                final title = data['title'] ?? '';
+                final condition = data['condition'] ?? '';
+                final price = data['price'].toString();
+                final imageUrl = data['imageUrl'] ?? '';
+                final region = data['region'] ?? 'Unknown';
+                final saleStatus = data['saleStatus'] ?? '';
+                final productId = doc.id;
+                final description = data['description'] ?? '';
+                final sellerEmail = data['sellerEmail'] ?? '';
+                final sellerUid = data['sellerUid'] ?? '';
+                final timestampValue = data['timestamp'];
+                final String timestampString = (timestampValue is Timestamp)
+                    ? timestampValue.toDate().toString()
+                    : '';
+
+                return GestureDetector(
+                  onTap: () async {
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user != null) {
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(user.uid)
+                          .collection('clickedProducts')
+                          .doc(productId)
+                          .set({'clickedAt': Timestamp.now()});
+                    }
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProductDetailScreen(
+                          productId: productId,
+                          title: title,
+                          price: price,
+                          description: description,
+                          imageUrl: imageUrl,
+                          timestamp: timestampString,
+                          sellerEmail: sellerEmail,
+                          chatRoomId: '',
+                          userName: sellerEmail,
+                          sellerUid: sellerUid,
+                          productTitle: title,
+                          productImageUrl: imageUrl,
+                          productPrice: price,
+                        ),
+                      ),
+                    );
+                    setState(() {});
+                  },
+                  child: ProductCard(
+                    title: title,
+                    imageUrl: imageUrl,
+                    price: price,
+                    region: region,
+                    saleStatus: saleStatus,
+                    condition: condition,
+                  ),
+                );
+              }).toList(),
+            ],
+            ...List.generate(_products.length, (index) {
+              final product = _products[index];
+              final productData = product.data() as Map<String, dynamic>;
+
+              final timestampValue = productData['timestamp'];
               final String timestampString = (timestampValue is Timestamp)
                   ? timestampValue.toDate().toString()
                   : '';
+
+              final String productId = productData['productId'] ?? product.id;
+              final String title = productData['title'] ?? '';
+              final String condition = productData['condition'] ?? '';
+              final String price = productData['price'].toString();
+              final String imageUrl = productData['imageUrl'] ?? '';
+              final String description = productData['description'] ?? '';
+              final String sellerEmail = productData['sellerEmail'] ?? '';
+              final String sellerUid = productData['sellerUid'] ?? '';
+              final String region = productData['region'] ?? 'Unknown';
+              final String saleStatus = productData['saleStatus'] ?? '';
 
               return GestureDetector(
                 onTap: () async {
@@ -405,72 +471,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   condition: condition,
                 ),
               );
-            }).toList(),
+            }),
           ],
-          ...List.generate(_products.length, (index) {
-            final product = _products[index];
-            final productData = product.data() as Map<String, dynamic>;
-
-            final timestampValue = productData['timestamp'];
-            final String timestampString = (timestampValue is Timestamp)
-                ? timestampValue.toDate().toString()
-                : '';
-
-            final String productId = productData['productId'] ?? product.id;
-            final String title = productData['title'] ?? '';
-            final String condition = productData['condition'] ?? '';
-            final String price = productData['price'].toString();
-            final String imageUrl = productData['imageUrl'] ?? '';
-            final String description = productData['description'] ?? '';
-            final String sellerEmail = productData['sellerEmail'] ?? '';
-            final String sellerUid = productData['sellerUid'] ?? '';
-            final String region = productData['region'] ?? 'Unknown';
-            final String saleStatus = productData['saleStatus'] ?? '';
-
-            return GestureDetector(
-              onTap: () async {
-                final user = FirebaseAuth.instance.currentUser;
-                if (user != null) {
-                  await FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(user.uid)
-                      .collection('clickedProducts')
-                      .doc(productId)
-                      .set({'clickedAt': Timestamp.now()});
-                }
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ProductDetailScreen(
-                      productId: productId,
-                      title: title,
-                      price: price,
-                      description: description,
-                      imageUrl: imageUrl,
-                      timestamp: timestampString,
-                      sellerEmail: sellerEmail,
-                      chatRoomId: '',
-                      userName: sellerEmail,
-                      sellerUid: sellerUid,
-                      productTitle: title,
-                      productImageUrl: imageUrl,
-                      productPrice: price,
-                    ),
-                  ),
-                );
-                setState(() {});
-              },
-              child: ProductCard(
-                title: title,
-                imageUrl: imageUrl,
-                price: price,
-                region: region,
-                saleStatus: saleStatus,
-                condition: condition,
-              ),
-            );
-          }),
-        ],
+        ),
       ),
     );
   }
