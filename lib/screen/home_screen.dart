@@ -76,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     switch (_selectedIndex) {
       case 1:
-        return 'Chatting';
+        return 'Chat';
       case 2:
         return 'My Page';
       default:
@@ -212,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
           backgroundColor: Colors.white,
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: 'HOME'),
-            BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'CHATTING'),
+            BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'CHAT'),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'MY PAGE'),
           ],
         ),

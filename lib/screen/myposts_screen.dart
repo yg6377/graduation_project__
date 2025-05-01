@@ -53,13 +53,13 @@ class MyPostsScreen extends StatelessWidget {
                 if (difference.inDays > 7) {
                   formattedTime = '${timestamp.month}/${timestamp.day}/${timestamp.year}';
                 } else if (difference.inDays >= 1) {
-                  formattedTime = '${difference.inDays}일 전';
+                  formattedTime = '${difference.inDays}days before';
                 } else if (difference.inHours >= 1) {
-                  formattedTime = '${difference.inHours}시간 전';
+                  formattedTime = '${difference.inHours}hours before';
                 } else if (difference.inMinutes >= 1) {
-                  formattedTime = '${difference.inMinutes}분 전';
+                  formattedTime = '${difference.inMinutes}minutes before';
                 } else {
-                  formattedTime = '방금 전';
+                  formattedTime = 'a moment ago';
                 }
               }
 
@@ -100,7 +100,7 @@ class MyPostsScreen extends StatelessWidget {
                             height: 80,
                             child: imageUrl.isNotEmpty
                                 ? Image.network(imageUrl, fit: BoxFit.cover)
-                                : Icon(Icons.image, size: 80),
+                                : Image.asset('assets/images/huanhuan_no_image.png'),
                           ),
                         ),
                         SizedBox(width: 12),

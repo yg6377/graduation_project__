@@ -91,7 +91,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
                           radius: 50,
                           backgroundImage: _currentUser?.photoURL != null
                               ? NetworkImage(_currentUser!.photoURL!)
-                              : NetworkImage('https://via.placeholder.com/150'),
+                              : AssetImage('assets/images/default_profile.png') as ImageProvider,
                         ),
                         SizedBox(width: 16),
                         // 닉네임 수정
