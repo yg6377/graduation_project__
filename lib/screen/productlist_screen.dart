@@ -26,11 +26,11 @@ class ProductCard extends StatelessWidget {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFF5FAFF),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Color(0xFFB6DBF8).withOpacity(0.2),
             spreadRadius: 1,
             blurRadius: 10,
             offset: Offset(0, 4),
@@ -72,21 +72,35 @@ class ProductCard extends StatelessWidget {
                   children: [
                     if (status == 'reserved')
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                         decoration: BoxDecoration(
-                          color: Colors.blue[100],
+                          color: Color(0xFFDFF0FF),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text('Reserved', style: TextStyle(color: Colors.blue, fontSize: 12)),
+                        child: Text(
+                          '예약중',
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
                       ),
                     if (status == 'soldout')
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                         decoration: BoxDecoration(
-                          color: Colors.grey[300],
+                          color: Color(0xFFEAEAEA),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text('Sold Out', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                        child: Text(
+                          '판매완료',
+                          style: TextStyle(
+                            color: Colors.black54,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
                       ),
                   ],
                 ),

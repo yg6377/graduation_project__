@@ -19,20 +19,20 @@ Future<void> main() async {
   await Firebase.initializeApp();
   runApp(MaterialApp(
     theme: ThemeData(
-      scaffoldBackgroundColor: Colors.white,
+      scaffoldBackgroundColor: Color(0xFFEAF6FF),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.white,
-        elevation: 1,
-        iconTheme: IconThemeData(color: Colors.blue),
-        titleTextStyle: TextStyle(color: Colors.blue, fontSize: 20, fontWeight: FontWeight.bold),
+        elevation: 0,
+        iconTheme: IconThemeData(color: Color(0xFF3B82F6)),
+        titleTextStyle: TextStyle(color: Color(0xFF3B82F6), fontSize: 20, fontWeight: FontWeight.bold),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: Colors.white,
-        selectedItemColor: Colors.blue,
+        selectedItemColor: Color(0xFF3B82F6),
         unselectedItemColor: Colors.grey,
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: Colors.blue,
+        backgroundColor: Color(0xFF3B82F6),
       ),
     ),
     home: HomeScreen(),
@@ -136,8 +136,10 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Scaffold(
+      backgroundColor: Color(0xFFEAF6FF),
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        backgroundColor: Color(0xFFEAF6FF),
         title: _selectedIndex == 0
             ? GestureDetector(
           onTap: () async {
@@ -173,23 +175,23 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Text(
                 _selectedRegion ?? '<Select Region>',
-                style: TextStyle(color: Colors.blue, fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(color: Color(0xFF3B82F6), fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              Icon(Icons.arrow_drop_down, color: Colors.blue),
+              Icon(Icons.arrow_drop_down, color: Color(0xFF3B82F6)),
             ],
           ),
         )
             : Text(_getAppBarTitle()),
         actions: [
           IconButton(
-            icon: Icon(Icons.search),
+            icon: Icon(Icons.search, color: Color(0xFF3B82F6)),
             onPressed: () async {
               await Navigator.pushNamed(context, '/search');
               setState(() {});
             },
           ),
           IconButton(
-            icon: Icon(Icons.notifications),
+            icon: Icon(Icons.notifications, color: Color(0xFF3B82F6)),
             onPressed: () async {
               await Navigator.pushNamed(context, '/notification');
               setState(() {});
@@ -203,16 +205,22 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(child: pages[_selectedIndex]),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
-        onTap: _onItemTapped,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'HOME'),
-          BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'CHATTING'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'MY PAGE'),
-        ],
+      bottomNavigationBar: Card(
+        elevation: 4,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(12))),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          selectedItemColor: Color(0xFF3B82F6),
+          unselectedItemColor: Colors.grey,
+          onTap: _onItemTapped,
+          backgroundColor: Colors.white,
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'HOME'),
+            BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'CHATTING'),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'MY PAGE'),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'uploadProduct',

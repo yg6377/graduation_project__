@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -17,6 +18,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final ImagePicker _picker = ImagePicker();
   String? _profileImageUrlFromDB;
   String? _selectedRegion;
+
+  final List<String> _regions = [
+    'Taipei', 'New Taipei', 'Danshui', 'Keelung', 'Taoyuan',
+    'Hsinchu', 'Taichung', 'Kaohsiung', 'Tainan', 'Hualien'
+  ];
 
   @override
   void initState() {
@@ -98,73 +104,148 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         await _currentUser!.updatePhotoURL(imageUrl);
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Profile has been saved.')),
-      );
-      Navigator.pop(context, true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Profile has been saved.')),
+        );
+        Navigator.pop(context, true);
+      }
     }
+  }
+
+  void _showRegionPicker() {
+    final initialIndex = _selectedRegion != null ? _regions.indexOf(_selectedRegion!) : 0;
+    showCupertinoModalPopup(
+      context: context,
+      builder: (_) => Container(
+        height: 250,
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        child: Column(
+          children: [
+            SizedBox(
+              height: 40,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  CupertinoButton(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text('Cancel'),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  CupertinoButton(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text('Done'),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: CupertinoPicker(
+                backgroundColor: CupertinoColors.systemBackground.resolveFrom(context),
+                scrollController: FixedExtentScrollController(initialItem: initialIndex),
+                itemExtent: 32,
+                onSelectedItemChanged: (index) {
+                  setState(() {
+                    _selectedRegion = _regions[index];
+                  });
+                },
+                children: _regions.map((region) => Center(child: Text(region))).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Edit Profile')),
-      body: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            GestureDetector(
-              onTap: _pickImage,
-              child: CircleAvatar(
-                radius: 50,
-                backgroundImage: _profileImage != null
-                    ? FileImage(_profileImage!)
-                    : (_profileImageUrlFromDB != null
-                        ? NetworkImage(_profileImageUrlFromDB!)
-                        : (_currentUser?.photoURL != null
-                            ? NetworkImage(_currentUser!.photoURL!)
-                            : AssetImage('assets/default_avatar.png') as ImageProvider)),
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: Text('Edit Profile'),
+      ),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              GestureDetector(
+                onTap: _pickImage,
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundImage: _profileImage != null
+                      ? FileImage(_profileImage!)
+                      : (_profileImageUrlFromDB != null
+                          ? NetworkImage(_profileImageUrlFromDB!)
+                          : (_currentUser?.photoURL != null
+                              ? NetworkImage(_currentUser!.photoURL!)
+                              : AssetImage('assets/default_avatar.png') as ImageProvider)),
+                ),
               ),
-            ),
-            SizedBox(height: 16),
-            Text('Nickname', style: TextStyle(fontSize: 16)),
-            SizedBox(height: 8),
-            TextField(
-              controller: _nicknameController,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Enter new nickname',
+              SizedBox(height: 24),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Nickname', style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(fontSize: 16)),
               ),
-            ),
-            SizedBox(height: 20),
-            DropdownButtonFormField<String>(
-              value: _selectedRegion,
-              decoration: InputDecoration(
-                labelText: 'Region',
-                border: OutlineInputBorder(),
+              SizedBox(height: 8),
+              CupertinoTextField(
+                controller: _nicknameController,
+                placeholder: 'Enter new nickname',
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                decoration: BoxDecoration(
+                  color: CupertinoColors.systemGrey6.resolveFrom(context),
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-              items: [
-                'Taipei', 'New Taipei', 'Danshui', 'Keelung', 'Taoyuan',
-                'Hsinchu', 'Taichung', 'Kaohsiung', 'Tainan', 'Hualien'
-              ].map((region) {
-                return DropdownMenuItem(
-                  value: region,
-                  child: Text(region),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedRegion = value;
-                });
-              },
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _saveProfile,
-              child: Text('Save'),
-            ),
-          ],
+              SizedBox(height: 24),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Region', style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(fontSize: 16)),
+              ),
+              SizedBox(height: 8),
+              GestureDetector(
+                onTap: _showRegionPicker,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemGrey6.resolveFrom(context),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: CupertinoColors.systemGrey.resolveFrom(context),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _selectedRegion ?? 'Select a region',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: _selectedRegion == null
+                              ? CupertinoColors.placeholderText
+                              : CupertinoColors.label,
+                        ),
+                      ),
+                      Icon(
+                        CupertinoIcons.chevron_down,
+                        color: CupertinoColors.systemGrey,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 32),
+              CupertinoButton(
+                color: Color(0xFF3B82F6),
+                onPressed: _saveProfile,
+                child: Text('Save'),
+              ),
+            ],
+          ),
         ),
       ),
     );
