@@ -81,14 +81,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         if (_selectedRegion != null) 'region': _selectedRegion,
       });
 
-      // Update all products by this user
-      final userProducts = await FirebaseFirestore.instance
-          .collection('products')
-          .where('sellerUid', isEqualTo: _currentUser!.uid)
-          .get();
+      if (_selectedRegion != null) {
+        final userProducts = await FirebaseFirestore.instance
+            .collection('products')
+            .where('sellerUid', isEqualTo: _currentUser!.uid)
+            .get();
 
-      for (final doc in userProducts.docs) {
-        await doc.reference.update({'region': _selectedRegion});
+        for (final doc in userProducts.docs) {
+          await doc.reference.update({'region': _selectedRegion});
+        }
       }
 
       // Update FirebaseAuth user data
