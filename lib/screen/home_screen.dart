@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'ProductUploadScreen.dart';
-import 'package:graduation_project_1/screen/productlist_screen.dart';
+import 'package:graduation_project_1/screen/productlist_screen.dart' show ProductListScreen;
 import 'ProductDetailScreen.dart';
 import 'package:graduation_project_1/screen/chatlist_Screen.dart';
 import 'package:graduation_project_1/screen/mypage_screen.dart';
 import 'package:graduation_project_1/firestore_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'dart:math';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(MaterialApp(home: HomeScreen()));
 }
 
@@ -26,13 +31,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String? _selectedRegion;
 
-  // 🔹 탭마다 보여줄 페이지들
-  List<Widget> get _pages => [
-        ProductListScreen(region: _selectedRegion), // 홈 화면 (상품 목록)
-        ChatListScreen(), // 채팅 화면
-        MyPageScreen(), // 마이페이지 화면
-      ];
-
   @override
   void initState() {
     super.initState();
@@ -42,9 +40,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadUserRegion() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-
+    print('🔥 현재 유저 UID: $uid');
     final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
     final regionFromUser = doc.data()?['region'];
+    print('🔥 Firestore에서 불러온 region: $regionFromUser');
     if (_selectedRegion == null && regionFromUser != null) {
       setState(() {
         _selectedRegion = regionFromUser;
@@ -53,9 +52,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _getAppBarTitle() {
+    if (_selectedIndex == 0) {
+      return 'Current Location: ${_selectedRegion ?? '<Select Region>'}';
+    }
     switch (_selectedIndex) {
-      case 0:
-        return 'Home';
       case 1:
         return 'Chatting';
       case 2:
@@ -76,21 +76,89 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      _selectedRegion == null
+          ? Center(child: CircularProgressIndicator())
+          : ProductListScreen(
+              key: ValueKey(_selectedRegion),
+              region: _selectedRegion,
+            ),
+      ChatListScreen(),
+      MyPageScreen(),
+    ];
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: Text(_getAppBarTitle()),
+        title: _selectedIndex == 0
+            ? GestureDetector(
+                onTap: () async {
+                  final selected = await showDialog<String>(
+                    context: context,
+                    builder: (context) => SimpleDialog(
+                      title: Text('Select Region'),
+                      children: [
+                        SimpleDialogOption(
+                          onPressed: () => Navigator.pop(context, 'Danshui'),
+                          child: Text('Danshui'),
+                        ),
+                        SimpleDialogOption(
+                          onPressed: () => Navigator.pop(context, 'Taipei'),
+                          child: Text('Taipei'),
+                        ),
+                        SimpleDialogOption(
+                          onPressed: () => Navigator.pop(context, 'Kaohsiung'),
+                          child: Text('Kaohsiung'),
+                        ),
+                        SimpleDialogOption(
+                          onPressed: () => Navigator.pop(context, 'Taichung'),
+                          child: Text('Taichung'),
+                        ),
+                        SimpleDialogOption(
+                          onPressed: () => Navigator.pop(context, 'Tainan'),
+                          child: Text('Tainan'),
+                        ),
+                        SimpleDialogOption(
+                          onPressed: () => Navigator.pop(context, 'Hualien'),
+                          child: Text('Hualien'),
+                        ),
+                        SimpleDialogOption(
+                          onPressed: () => Navigator.pop(context, 'Keelung'),
+                          child: Text('Keelung'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (selected != null) {
+                    setState(() {
+                      _selectedRegion = selected;
+                    });
+                  }
+                },
+                child: Row(
+                  children: [
+                    Text(
+                      _selectedRegion ?? '<Select Region>',
+                      style: TextStyle(color: Colors.blue, fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    Icon(Icons.arrow_drop_down, color: Colors.blue),
+                  ],
+                ),
+              )
+            : Text(_getAppBarTitle()),
         actions: [
           IconButton(
             icon: Icon(Icons.search),
-            onPressed: () {
-              Navigator.pushNamed(context, '/search');
+            onPressed: () async {
+              await Navigator.pushNamed(context, '/search');
+              setState(() {});
             },
           ),
           IconButton(
             icon: Icon(Icons.notifications),
-            onPressed: () {
-              Navigator.pushNamed(context, '/notification');
+            onPressed: () async {
+              await Navigator.pushNamed(context, '/notification');
+              setState(() {});
             },
           ),
         ],
@@ -100,58 +168,10 @@ class _HomeScreenState extends State<HomeScreen> {
           if (_selectedIndex == 0)
             Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 12.0),
-                  child: GestureDetector(
-                    onTap: () async {
-                      final result = await showModalBottomSheet<String>(
-                        context: context,
-                        builder: (context) {
-                          return Container(
-                            padding: EdgeInsets.all(16),
-                            child: ListView(
-                              children: [
-                                'Taipei', 'New Taipei', 'Danshui', 'Keelung', 'Taoyuan',
-                                'Hsinchu', 'Taichung', 'Kaohsiung', 'Tainan', 'Hualien'
-                              ].map((region) {
-                                return ListTile(
-                                  title: Text(region),
-                                  onTap: () {
-                                    Navigator.pop(context, region);
-                                  },
-                                );
-                              }).toList(),
-                            ),
-                          );
-                        },
-                      );
-                      if (result != null) {
-                        setState(() {
-                          _selectedRegion = result;
-                        });
-                      }
-                    },
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('Region: ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                        Text(
-                          _selectedRegion ?? '<Select Region>',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.blue,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                        Icon(Icons.arrow_drop_down),
-                      ],
-                    ),
-                  ),
-                ),
                 SizedBox(height: 12),
               ],
             ),
-          Expanded(child: _pages[_selectedIndex]),
+          Expanded(child: pages[_selectedIndex]),
         ],
       ),
 
@@ -172,72 +192,15 @@ class _HomeScreenState extends State<HomeScreen> {
             alignment: Alignment.bottomRight,
             child: FloatingActionButton(
               heroTag: 'uploadProduct',
-              onPressed: () {
-                Navigator.push(
+              onPressed: () async {
+                await Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => ProductUploadScreen()),
                 );
+                setState(() {});
               },
               child: Icon(Icons.add),
               tooltip: 'Upload Product',
-            ),
-          ),
-          Positioned(
-            bottom: 5,
-            right: 80,
-            child: FloatingActionButton(
-              heroTag: 'generateTestData',
-              mini: true,
-              backgroundColor: Colors.orange,
-              onPressed: () async {
-                final usersSnapshot = await FirebaseFirestore.instance.collection('users').get();
-                final users = usersSnapshot.docs;
-
-                if (users.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('No users found to assign as sellers.')),
-                  );
-                  return;
-                }
-
-                final random = Random();
-                final sampleTitles = ['Laptop', 'Phone', 'Book', 'Chair', 'Shoes', 'Watch', 'Backpack', 'Keyboard', 'Monitor', 'Jacket'];
-                final sampleImages = [
-                  'https://picsum.photos/seed/item1/300',
-                  'https://picsum.photos/seed/item2/300',
-                  'https://picsum.photos/seed/item3/300',
-                  'https://picsum.photos/seed/item4/300',
-                  'https://picsum.photos/seed/item5/300',
-                ];
-
-                for (int i = 0; i < 5; i++) {
-                  final randomUser = users[random.nextInt(users.length)].data();
-                  final productName = sampleTitles[random.nextInt(sampleTitles.length)];
-
-                  final price = ((random.nextInt(96) + 5) * 100);
-
-
-
-                  await FirebaseFirestore.instance.collection('products').add({
-                    'title': productName,
-                    'price': '$price NTD',
-                    'description': 'This is a sample description.',
-                    'imageUrl': sampleImages[random.nextInt(sampleImages.length)],
-                    'likes': 0,
-                    'timestamp': FieldValue.serverTimestamp(),
-                    'sellerEmail': randomUser['email'] ?? 'test@example.com',
-                    'sellerUid': users[random.nextInt(users.length)].id,
-                    'isTest': true,
-                  });
-                }
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Test products uploaded!')),
-                );
-              },
-
-              child: Text('Generate'),
-              tooltip: 'Generate Test Products',
             ),
           ),
         ],

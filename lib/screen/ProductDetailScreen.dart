@@ -42,6 +42,28 @@ class ProductDetailScreen extends StatefulWidget {
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  bool _isLiked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfLiked();
+  }
+
+  void _checkIfLiked() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('likedProducts')
+        .doc(widget.productId)
+        .get();
+    setState(() {
+      _isLiked = doc.exists;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -71,9 +93,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
                 iconEnabledColor: Colors.black,
                 items: [
-                  DropdownMenuItem(value: 'selling', child: Text('Selling', style: TextStyle(color: Colors.black))),
-                  DropdownMenuItem(value: 'inProgress', child: Text('Reserved', style: TextStyle(color: Colors.black))),
-                  DropdownMenuItem(value: 'soldOut', child: Text('Sold Out', style: TextStyle(color: Colors.black))),
+                  DropdownMenuItem(value: 'selling', child: Text('Selling')),
+                  DropdownMenuItem(value: 'inProgress', child: Text('Reserved')),
+                  DropdownMenuItem(value: 'soldOut', child: Text('Sold Out')),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -117,11 +139,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 bool confirmed = await showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: Text('Comfirm Delete'),
+                    title: Text('Confirm Delete'),
                     content: Text('Are you sure delete your post?'),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(context, false), child: Text('cancel')),
-                      TextButton(onPressed: () => Navigator.pop(context, true), child: Text('delete')),
+                      TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Cancel')),
+                      TextButton(onPressed: () => Navigator.pop(context, true), child: Text('Delete')),
                     ],
                   ),
                 );
@@ -142,12 +164,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               final isOwner = FirebaseAuth.instance.currentUser?.uid == widget.sellerUid;
               if (isOwner) {
                 return [
-                  PopupMenuItem(value: 'edit', child: Text('edit')),
-                  PopupMenuItem(value: 'delete', child: Text('delete')),
+                  PopupMenuItem(value: 'edit', child: Text('Edit')),
+                  PopupMenuItem(value: 'delete', child: Text('Delete')),
                 ];
               } else {
                 return [
-                  PopupMenuItem(value: 'report', child: Text('report')),
+                  PopupMenuItem(value: 'report', child: Text('Report')),
                 ];
               }
             },
@@ -170,95 +192,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
             ),
             SizedBox(height: 16),
-            FutureBuilder<DocumentSnapshot>(
-              future: FirebaseFirestore.instance.collection('products').doc(widget.productId).get(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData || !snapshot.data!.exists) {
-                  return SizedBox.shrink();
-                }
-
-                final data = snapshot.data!.data() as Map<String, dynamic>;
-                final saleStatus = data['saleStatus'] ?? 'selling';
-                final price = data['price'] ?? widget.price;
-                final condition = data['condition'] ?? '';
-
-                String saleStatusText;
-                if (saleStatus == 'selling') {
-                  saleStatusText = 'Selling';
-                } else if (saleStatus == 'inProgress') {
-                  saleStatusText = 'Reserved';
-                } else if (saleStatus == 'soldOut') {
-                  saleStatusText = 'Sold Out';
-                } else {
-                  saleStatusText = 'Selling';
-                }
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${widget.title}',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                );
-              },
-            ),
-            FutureBuilder<DocumentSnapshot>(
-              future: FirebaseFirestore.instance.collection('users').doc(widget.sellerUid).get(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Text('Loading uploader info...', style: TextStyle(fontSize: 14, color: Colors.grey));
-                }
-                if (!snapshot.hasData || !snapshot.data!.exists) {
-                  return Text('Uploader: Unknown', style: TextStyle(fontSize: 14, color: Colors.grey));
-                }
-
-                final data = snapshot.data!.data() as Map<String, dynamic>;
-                final nickname = data['nickname'] ?? 'Unknown';
-                final profileImageUrl = data['image'] ?? '';
-
-                return Container(
-                  margin: EdgeInsets.symmetric(vertical: 12),
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.2),
-                        spreadRadius: 2,
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      if (profileImageUrl.isNotEmpty)
-                        CircleAvatar(
-                          backgroundImage: NetworkImage(profileImageUrl),
-                          radius: 24,
-                        )
-                      else
-                        CircleAvatar(
-                          child: Icon(Icons.person),
-                          radius: 24,
-                        ),
-                      SizedBox(width: 10),
-                      Text(
-                        nickname,
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                );
-              },
+            Text(
+              widget.title,
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 8),
             Text(
-              'Uploaded by: ${widget.timestamp}',
+              'Uploaded: ${widget.timestamp}',
               style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
             SizedBox(height: 16),
@@ -276,106 +216,55 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           border: Border(top: BorderSide(color: Colors.grey.shade300)),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // 좋아요 버튼 + 가격
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.favorite_border),
-                  onPressed: () {
-                    // TODO: Implement like toggle logic
-                  },
-                ),
-                SizedBox(width: 5), // 아이콘과 구분선 사이 여백
-                Container(
-                  height: 20,
-                  width: 1,
-                  color: Colors.grey,
-                ),
-                SizedBox(width: 8), // 구분선과 가격 사이 여백
-                Text(
-                  '${widget.price} NTD',
-                  style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-
-            // 댓글 버튼 (아이콘만 표시)
             IconButton(
-              icon: Icon(Icons.mode_comment_outlined, size: 30),
+              icon: Icon(
+                _isLiked ? Icons.favorite : Icons.favorite_border,
+                color: _isLiked ? Colors.red : Colors.grey,
+              ),
+              onPressed: () async {
+                final user = FirebaseAuth.instance.currentUser;
+                if (user == null) return;
+                final likedRef = FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(user.uid)
+                    .collection('likedProducts')
+                    .doc(widget.productId);
+                final likedSnapshot = await likedRef.get();
+                if (likedSnapshot.exists) {
+                  await likedRef.delete();
+                } else {
+                  await likedRef.set({
+                    'productId': widget.productId,
+                    'likedAt': FieldValue.serverTimestamp(),
+                  });
+                }
+                setState(() {
+                  _isLiked = !_isLiked;
+                });
+              },
+            ),
+            Text(
+              '${widget.price} NTD',
+              style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+            ),
+            ElevatedButton(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ProductCommentsScreen(
-                      productId: widget.productId,
-                    ),
-                  ),
-                );
-              },
-            ),
-
-            // 메세지 버튼 ("Go Chat" 네모난 버튼)
-            ElevatedButton(
-              onPressed: () async {
-                final currentUser = FirebaseAuth.instance.currentUser;
-                if (currentUser == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Need to Login')),
-                  );
-                  return;
-                }
-
-                final myUid = currentUser.uid;
-                final sellerUid = widget.sellerUid;
-
-                if (myUid == sellerUid) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('You can’t send a message to yourself.')),
-                  );
-                  return;
-                }
-
-                List<String> uids = [myUid, sellerUid]..sort();
-                final chatRoomId = uids.join('_');
-
-                final chatRef = FirebaseFirestore.instance.collection('chatRooms').doc(chatRoomId);
-                final chatSnapshot = await chatRef.get();
-
-                if (!chatSnapshot.exists) {
-                  await chatRef.set({
-                    'participants': uids,
-                    'lastMessage': '',
-                    'lastTime': FieldValue.serverTimestamp(),
-                    'location': '',
-                    'profileImageUrl': '',
-                  });
-                }
-
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
                     builder: (_) => ChatRoomScreen(
-                      chatRoomId: chatRoomId,
-                      userName: '',
-                      productTitle: widget.title,
-                      productImageUrl: widget.imageUrl,
-                      productPrice: widget.price,
+                      chatRoomId: widget.chatRoomId,
+                      userName: widget.userName,
+                      productTitle: widget.productTitle,
+                      productImageUrl: widget.productImageUrl,
+                      productPrice: widget.productPrice,
                     ),
                   ),
                 );
               },
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                backgroundColor: Colors.blueAccent,
-                foregroundColor: Colors.white,
-              ),
-              child: Text("Go Chat"),
+              child: Text('Go Chat'),
             ),
           ],
         ),

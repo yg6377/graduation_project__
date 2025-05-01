@@ -74,6 +74,26 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
         'productId': docRef.id,
       });
 
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user!.uid)
+          .collection('clickedProducts')
+          .doc(docRef.id)
+          .set({
+        'productId': docRef.id,
+        'clickedAt': null,
+      });
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('likedProducts')
+          .doc(docRef.id)
+          .set({
+        'productId': docRef.id,
+        'likedAt': null,
+      });
+
       // Navigate back after upload
       Navigator.pop(context);
 
