@@ -10,7 +10,7 @@ class ProductCard extends StatelessWidget {
   final String imageUrl;
   final String price;
   final String region;
-  final String status;
+  final String saleStatus;
 
   const ProductCard({
     Key? key,
@@ -18,7 +18,7 @@ class ProductCard extends StatelessWidget {
     required this.imageUrl,
     required this.price,
     required this.region,
-    required this.status,
+    required this.saleStatus,
   }) : super(key: key);
 
   @override
@@ -51,7 +51,7 @@ class ProductCard extends StatelessWidget {
                     fit: BoxFit.cover,
                   )
                 : Image.asset(
-                    'assets/images/no image.png',
+                    'assets/images/huanhuan_no_image.png',
                     height: 160,
                     width: double.infinity,
                     fit: BoxFit.cover,
@@ -70,7 +70,7 @@ class ProductCard extends StatelessWidget {
                 SizedBox(height: 6),
                 Row(
                   children: [
-                    if (status == 'reserved')
+                    if (saleStatus == 'reserved')
                       Container(
                         padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                         decoration: BoxDecoration(
@@ -78,7 +78,7 @@ class ProductCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          '예약중',
+                          'Reserved',
                           style: TextStyle(
                             color: Colors.blue,
                             fontSize: 12,
@@ -86,7 +86,7 @@ class ProductCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                    if (status == 'soldout')
+                    if (saleStatus == 'soldout')
                       Container(
                         padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                         decoration: BoxDecoration(
@@ -94,7 +94,7 @@ class ProductCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          '판매완료',
+                          'Sold Out',
                           style: TextStyle(
                             color: Colors.black54,
                             fontSize: 12,
@@ -290,7 +290,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
     }
     if (_products.isEmpty) {
       return Scaffold(
-        body: Center(child: Text('해당 지역에 등록된 상품이 없습니다.')),
+        body: Center(child: Text('There are no products in this location')),
       );
     }
     return Scaffold(
@@ -317,7 +317,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
           // region 값은 Firestore의 상품 데이터에 들어있는 region 사용
           final String region = productData['region'] ?? 'Unknown';
-          final String status = productData['status'] ?? '';
+          final String saleStatus = productData['saleStatus'] ?? '';
 
           return Stack(
             children: [
@@ -350,7 +350,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   imageUrl: imageUrl,
                   price: price,
                   region: region,
-                  status: status,
+                  saleStatus: saleStatus
                 ),
               ),
               Positioned(

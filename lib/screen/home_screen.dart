@@ -98,11 +98,6 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _selectedRegion = newRegion;
       });
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid != null) {
-        await FirebaseFirestore.instance.collection('users').doc(uid).update({'region': newRegion});
-        print('🔥 사용자 지역 업데이트 완료: $newRegion');
-      }
       setState(() {}); // Refresh ProductListScreen
     }
   }

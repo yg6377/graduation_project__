@@ -122,7 +122,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   height: 340,
                   child: widget.imageUrl.isNotEmpty
                       ? Image.network(widget.imageUrl, fit: BoxFit.cover)
-                      : Image.asset('assets/images/no image.png', fit: BoxFit.cover),
+                      : Image.asset('assets/images/huanhuan_no_image.png', fit: BoxFit.cover),
                 ),
                 Positioned(
                   top: 16,
@@ -256,7 +256,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     },
                   ),
                   SizedBox(height: 12),
-                  // Title with status
+                  // Sale status badge and title
                   FutureBuilder<DocumentSnapshot>(
                     future: FirebaseFirestore.instance.collection('products').doc(widget.productId).get(),
                     builder: (context, snapshot) {
@@ -265,18 +265,52 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       }
                       final data = snapshot.data!.data() as Map<String, dynamic>;
                       final saleStatus = data['saleStatus'] ?? 'selling';
-                      String titleText = widget.title;
-                      TextStyle titleStyle = TextStyle(fontSize: 24, fontWeight: FontWeight.bold);
+                      Widget? badge;
                       if (saleStatus == 'reserved') {
-                        titleText = '[예약중] ${widget.title}';
-                        titleStyle = titleStyle.copyWith(color: Colors.orangeAccent);
+                        badge = Container(
+                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Color(0xFFDFF0FF),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'Reserved',
+                            style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        );
                       } else if (saleStatus == 'soldout') {
-                        titleText = '[판매완료] ${widget.title}';
-                        titleStyle = titleStyle.copyWith(color: Colors.grey);
+                        badge = Container(
+                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.grey,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'Sold Out',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        );
                       }
-                      return Text(
-                        titleText,
-                        style: titleStyle,
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (badge != null) ...[
+                            badge,
+                            SizedBox(height: 6),
+                          ],
+                          Text(
+                            widget.title,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: saleStatus == 'reserved'
+                                  ? Colors.black
+                                  : saleStatus == 'soldout'
+                                      ? Colors.grey
+                                      : Colors.black,
+                            ),
+                          ),
+                        ],
                       );
                     },
                   ),

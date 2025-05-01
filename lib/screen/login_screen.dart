@@ -65,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Image.asset(
-                        'assets/images/huanhuan_character_icon.png',
+                        'assets/images/huanhuan_welcome.png',
                         height: 300,
                       ),
                       CupertinoTextField(
