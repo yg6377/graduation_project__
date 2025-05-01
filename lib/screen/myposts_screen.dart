@@ -41,36 +41,85 @@ class MyPostsScreen extends StatelessWidget {
               final condition = data['condition'] ?? '';
               final title = data['title'] ?? '';
               final displayTitle = condition.isNotEmpty ? '[$condition] $title' : title;
-              return Card(
-                margin: EdgeInsets.all(8),
-                child: ListTile(
-                  title: Text(displayTitle),
-                  subtitle: Text(data['price'] ?? ''),
-                  leading: data['imageUrl'] != null && data['imageUrl'].isNotEmpty
-                      ? Image.network(data['imageUrl'], width: 60, height: 60, fit: BoxFit.cover)
-                      : Icon(Icons.image, size: 60),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ProductDetailScreen(
-                          productId: posts[index].id,
-                          title: displayTitle,
-                          price: data['price'] ?? '',
-                          description: data['description'] ?? '',
-                          imageUrl: data['imageUrl'] ?? '',
-                          timestamp: data['timestamp']?.toDate().toString() ?? '',
-                          sellerUid: data['sellerUid'] ?? 'unknown',
-                          sellerEmail: data['sellerUid'] ?? '',
-                          chatRoomId: '',
-                          userName: '',
-                          productTitle: title,
-                          productImageUrl: data['imageUrl'] ?? '',
-                          productPrice: data['price'] ?? '',
-                        ),
+              final imageUrl = data['imageUrl'] ?? '';
+              final price = data['price']?.toString() ?? '';
+              final nickname = data['userName'] ?? '';
+              final region = data['region'] ?? '';
+              final timestamp = data['timestamp']?.toDate();
+
+              String formattedTime = 'Unknown';
+              if (timestamp != null) {
+                final difference = DateTime.now().difference(timestamp);
+                if (difference.inDays > 7) {
+                  formattedTime = '${timestamp.month}/${timestamp.day}/${timestamp.year}';
+                } else if (difference.inDays >= 1) {
+                  formattedTime = '${difference.inDays}일 전';
+                } else if (difference.inHours >= 1) {
+                  formattedTime = '${difference.inHours}시간 전';
+                } else if (difference.inMinutes >= 1) {
+                  formattedTime = '${difference.inMinutes}분 전';
+                } else {
+                  formattedTime = '방금 전';
+                }
+              }
+
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProductDetailScreen(
+                        productId: posts[index].id,
+                        title: displayTitle,
+                        price: price,
+                        description: data['description'] ?? '',
+                        imageUrl: imageUrl,
+                        timestamp: formattedTime,
+                        sellerUid: data['sellerUid'] ?? '',
+                        sellerEmail: data['sellerUid'] ?? '',
+                        chatRoomId: '',
+                        userName: nickname,
+                        productTitle: title,
+                        productImageUrl: imageUrl,
+                        productPrice: price,
                       ),
-                    );
-                  },
+                    ),
+                  );
+                },
+                child: Card(
+                  margin: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  child: Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: SizedBox(
+                            width: 80,
+                            height: 80,
+                            child: imageUrl.isNotEmpty
+                                ? Image.network(imageUrl, fit: BoxFit.cover)
+                                : Icon(Icons.image, size: 80),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(displayTitle, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                              SizedBox(height: 4),
+                              Text('$price NTD', style: TextStyle(fontSize: 16)),
+                              SizedBox(height: 4),
+                              Text('$nickname • $region', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                              Text(formattedTime, style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               );
             },
