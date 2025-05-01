@@ -11,6 +11,7 @@ class ProductCard extends StatelessWidget {
   final String price;
   final String region;
   final String saleStatus;
+  final VoidCallback? onTap;
 
   const ProductCard({
     Key? key,
@@ -19,6 +20,7 @@ class ProductCard extends StatelessWidget {
     required this.price,
     required this.region,
     required this.saleStatus,
+    this.onTap,
   }) : super(key: key);
 
   @override

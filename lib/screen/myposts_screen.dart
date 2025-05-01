@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:graduation_project_1/screen/productlist_screen.dart';
 import 'ProductDetailScreen.dart'; // Replace with your actual import path
 
 class MyPostsScreen extends StatelessWidget {
@@ -45,6 +46,7 @@ class MyPostsScreen extends StatelessWidget {
               final price = data['price']?.toString() ?? '';
               final nickname = data['userName'] ?? '';
               final region = data['region'] ?? '';
+              final saleStatus = data['saleStatus'] ?? '';
               final timestamp = data['timestamp']?.toDate();
 
               String formattedTime = 'Unknown';
@@ -86,40 +88,12 @@ class MyPostsScreen extends StatelessWidget {
                     ),
                   );
                 },
-                child: Card(
-                  margin: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  child: Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: SizedBox(
-                            width: 80,
-                            height: 80,
-                            child: imageUrl.isNotEmpty
-                                ? Image.network(imageUrl, fit: BoxFit.cover)
-                                : Image.asset('assets/images/huanhuan_no_image.png'),
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(displayTitle, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                              SizedBox(height: 4),
-                              Text('$price NTD', style: TextStyle(fontSize: 16)),
-                              SizedBox(height: 4),
-                              Text('$nickname • $region', style: TextStyle(fontSize: 14, color: Colors.grey)),
-                              Text(formattedTime, style: TextStyle(fontSize: 12, color: Colors.grey)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                child: ProductCard(
+                  title: displayTitle,
+                  imageUrl: imageUrl,
+                  price: price,
+                  region: region,
+                  saleStatus: saleStatus,
                 ),
               );
             },

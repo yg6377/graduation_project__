@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:graduation_project_1/screen/productlist_screen.dart';
 import 'ProductDetailScreen.dart'; // Adjust the import path as needed
 
 class FavoriteListScreen extends StatelessWidget {
@@ -64,15 +65,16 @@ class FavoriteListScreen extends StatelessWidget {
               final condition = data['condition'] ?? '';
               final title = data['title'] ?? '';
               final displayTitle = condition.isNotEmpty ? '[$condition] $title' : title;
+              final saleStatus = data['saleStatus'] ?? '';
+              final region = data['region'] ?? '';
               return Card(
                 margin: EdgeInsets.all(8),
-                child: ListTile(
-                  title: Text(displayTitle),
-                  subtitle: Text((data['price'] ?? '').toString()),
-                  leading: data['imageUrl'] != null && data['imageUrl'].isNotEmpty
-                      ? Image.network(data['imageUrl'], width: 60, height: 60, fit: BoxFit.cover)
-                      : Icon(Icons.image, size: 60),
-                  trailing: Icon(Icons.favorite, color: Colors.red),
+                child: ProductCard(
+                  title: displayTitle,
+                  imageUrl: data['imageUrl'] ?? '',
+                  price: (data['price'] ?? '').toString(),
+                  region: region,
+                  saleStatus: saleStatus,
                   onTap: () {
                     Navigator.push(
                       context,
