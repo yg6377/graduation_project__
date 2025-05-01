@@ -5,6 +5,116 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'recommendation_service.dart';
 
+class ProductCard extends StatelessWidget {
+  final String title;
+  final String imageUrl;
+  final String price;
+  final String region;
+  final String status;
+
+  const ProductCard({
+    Key? key,
+    required this.title,
+    required this.imageUrl,
+    required this.price,
+    required this.region,
+    required this.status,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 이미지
+          ClipRRect(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+            child: imageUrl.isNotEmpty
+                ? Image.network(
+                    imageUrl,
+                    height: 160,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  )
+                : Image.asset(
+                    'assets/images/no image.png',
+                    height: 160,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+          ),
+          // 텍스트 내용
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                SizedBox(height: 6),
+                Row(
+                  children: [
+                    if (status == 'reserved')
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[100],
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text('Reserved', style: TextStyle(color: Colors.blue, fontSize: 12)),
+                      ),
+                    if (status == 'soldout')
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text('Sold Out', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                      ),
+                  ],
+                ),
+                SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(Icons.place, size: 14, color: Colors.grey),
+                    SizedBox(width: 4),
+                    Text(
+                      region,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 4),
+                Text(
+                  '$price NTD',
+                  style: TextStyle(color: Colors.blue, fontSize: 15),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class ProductListScreen extends StatefulWidget {
   final String? region;
   const ProductListScreen({Key? key, this.region}) : super(key: key);
@@ -191,183 +301,128 @@ class _ProductListScreenState extends State<ProductListScreen> {
           final String sellerUid = productData['sellerUid'] ?? '';
           final String displayTitle = condition.isNotEmpty ? '[$condition] $title' : title;
 
-          return Container(
-            margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-              child: Stack(
-                children: [
-                  ListTile(
-                    leading: AspectRatio(
-                      aspectRatio: 1,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: imageUrl.isNotEmpty
-                            ? Image.network(imageUrl, fit: BoxFit.cover)
-                            : Image.asset('assets/images/no image.png', fit: BoxFit.cover),
+          // region 값은 Firestore의 상품 데이터에 들어있는 region 사용
+          final String region = productData['region'] ?? 'Unknown';
+          final String status = productData['status'] ?? '';
+
+          return Stack(
+            children: [
+              GestureDetector(
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProductDetailScreen(
+                        productId: productId,
+                        title: displayTitle,
+                        price: price,
+                        description: description,
+                        imageUrl: imageUrl,
+                        timestamp: timestampString,
+                        sellerEmail: sellerEmail,
+                        chatRoomId: '',
+                        userName: sellerEmail,
+                        sellerUid: sellerUid,
+                        productTitle: title,
+                        productImageUrl: imageUrl,
+                        productPrice: price,
                       ),
                     ),
-                    title: Text(
-                      displayTitle,
-                      style: TextStyle(fontSize: 18),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('$price NTD', style: TextStyle(fontSize: 16)),
-                        FutureBuilder<DocumentSnapshot>(
-                          future: FirebaseFirestore.instance.collection('users').doc(sellerUid).get(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
-                              return Text('Loading user info...', style: TextStyle(fontSize: 12, color: Colors.grey));
-                            }
-                            if (!snapshot.hasData || !snapshot.data!.exists) {
-                              return Text('Unknown user', style: TextStyle(fontSize: 12, color: Colors.grey));
-                            }
-
-                            final data = snapshot.data!.data() as Map<String, dynamic>;
-                            final nickname = data['nickname'] ?? 'Unknown';
-                            final region = data['region'] ?? 'Unknown';
-
-                            final timestamp = productData['timestamp'];
-                            String timeDisplay = '';
-                            if (timestamp is Timestamp) {
-                              final date = timestamp.toDate();
-                              final now = DateTime.now();
-                              final difference = now.difference(date);
-
-                              if (difference.inDays > 7) {
-                                timeDisplay = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-                              } else {
-                                timeDisplay = timeago.format(date, locale: 'en');
-                              }
-                            }
-                            return Text('$nickname - $region • $timeDisplay', style: TextStyle(fontSize: 12, color: Colors.grey));
-                          },
-                        ),
-                      ],
-                    ),
-                    onTap: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ProductDetailScreen(
-                            productId: productId,
-                            title: displayTitle,
-                            price: price,
-                            description: description,
-                            imageUrl: imageUrl,
-                            timestamp: timestampString,
-                            sellerEmail: sellerEmail,
-                            chatRoomId: '',
-                            userName: sellerEmail,
-                            sellerUid: sellerUid,
-                            productTitle: title,
-                            productImageUrl: imageUrl,
-                            productPrice: price,
+                  );
+                  setState(() {});
+                },
+                child: ProductCard(
+                  title: displayTitle,
+                  imageUrl: imageUrl,
+                  price: price,
+                  region: region,
+                  status: status,
+                ),
+              ),
+              Positioned(
+                bottom: 20,
+                right: 24,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FutureBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
+                      future: (() {
+                        final user = FirebaseAuth.instance.currentUser;
+                        if (user == null) return Future<DocumentSnapshot<Map<String, dynamic>>?>.value(null);
+                        return FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(user.uid)
+                            .collection('likedProducts')
+                            .doc(productId)
+                            .get();
+                      })(),
+                      builder: (context, AsyncSnapshot<DocumentSnapshot<Map<String, dynamic>>?> snapshot) {
+                        final isLiked = snapshot.hasData && snapshot.data != null && snapshot.data?.exists == true;
+                        return IconButton(
+                          icon: Icon(
+                            isLiked ? Icons.favorite : Icons.favorite_border,
+                            color: isLiked ? Colors.red : Colors.grey,
                           ),
-                        ),
-                      );
-                      setState(() {});
-                    },
-                  ),
-                  Positioned(
-                    bottom: 8,
-                    right: 8,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        FutureBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
-                          future: (() {
+                          onPressed: () async {
                             final user = FirebaseAuth.instance.currentUser;
-                            if (user == null) return Future<DocumentSnapshot<Map<String, dynamic>>?>.value(null);
-                            return FirebaseFirestore.instance
+                            if (user == null) return;
+                            print('🛠️ [ListScreen] 좋아요 토글 시작: $productId');
+                            final productRef = FirebaseFirestore.instance.collection('products').doc(productId);
+                            final likeUserRef = FirebaseFirestore.instance
                                 .collection('users')
                                 .doc(user.uid)
                                 .collection('likedProducts')
+                                .doc(productId);
+                            final likeProductRef = FirebaseFirestore.instance
+                                .collection('products')
                                 .doc(productId)
-                                .get();
-                          })(),
-                          builder: (context, AsyncSnapshot<DocumentSnapshot<Map<String, dynamic>>?> snapshot) {
-                            final isLiked = snapshot.hasData && snapshot.data != null && snapshot.data?.exists == true;
-                            return IconButton(
-                              icon: Icon(
-                                isLiked ? Icons.favorite : Icons.favorite_border,
-                                color: isLiked ? Colors.red : Colors.grey,
-                              ),
-                              onPressed: () async {
-                                final user = FirebaseAuth.instance.currentUser;
-                                if (user == null) return;
-                                print('🛠️ [ListScreen] 좋아요 토글 시작: $productId');
-                                final productRef = FirebaseFirestore.instance.collection('products').doc(productId);
-                                final likeUserRef = FirebaseFirestore.instance
-                                    .collection('users')
-                                    .doc(user.uid)
-                                    .collection('likedProducts')
-                                    .doc(productId);
-                                final likeProductRef = FirebaseFirestore.instance
-                                    .collection('products')
-                                    .doc(productId)
-                                    .collection('likes')
-                                    .doc(user.uid);
-                                final likeUserDoc = await likeUserRef.get();
-                                final alreadyLiked = likeUserDoc.exists;
-                                print('🛠️ [ListScreen] 이전 좋아요 상태: $alreadyLiked');
-                                if (alreadyLiked) {
-                                  // Unlike: Remove from both user and product collections, decrement counter
-                                  await likeUserRef.delete();
-                                  await likeProductRef.delete();
-                                  await productRef.update({'likes': FieldValue.increment(-1)});
-                                } else {
-                                  // Like: Add to both user and product collections, increment counter
-                                  await likeUserRef.set({
-                                    'productId': productId,
-                                    'likedAt': Timestamp.now(),
-                                  });
-                                  await likeProductRef.set({'likedAt': Timestamp.now()});
-                                  await productRef.update({'likes': FieldValue.increment(1)});
-                                }
-                                print('🛠️ [ListScreen] Firestore 좋아요 상태 변경 완료 for $productId');
-                                setState(() {});
-                              },
-                            );
-                          },
-                        ),
-                        // 좋아요 수 텍스트 표시 (실시간 반영)
-                        StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                          stream: FirebaseFirestore.instance
-                              .collection('products')
-                              .doc(productId)
-                              .snapshots(),
-                          builder: (context, snapLikes) {
-                            int likeCount = 0;
-                            if (snapLikes.hasData && snapLikes.data!.exists) {
-                              final data = snapLikes.data!.data();
-                              likeCount = data?['likes'] is int ? data!['likes'] as int : 0;
+                                .collection('likes')
+                                .doc(user.uid);
+                            final likeUserDoc = await likeUserRef.get();
+                            final alreadyLiked = likeUserDoc.exists;
+                            print('🛠️ [ListScreen] 이전 좋아요 상태: $alreadyLiked');
+                            if (alreadyLiked) {
+                              // Unlike: Remove from both user and product collections, decrement counter
+                              await likeUserRef.delete();
+                              await likeProductRef.delete();
+                              await productRef.update({'likes': FieldValue.increment(-1)});
+                            } else {
+                              // Like: Add to both user and product collections, increment counter
+                              await likeUserRef.set({
+                                'productId': productId,
+                                'likedAt': Timestamp.now(),
+                              });
+                              await likeProductRef.set({'likedAt': Timestamp.now()});
+                              await productRef.update({'likes': FieldValue.increment(1)});
                             }
-                            return Text(
-                              '$likeCount',
-                              style: TextStyle(fontSize: 12, color: Colors.grey),
-                            );
+                            print('🛠️ [ListScreen] Firestore 좋아요 상태 변경 완료 for $productId');
+                            setState(() {});
                           },
-                        ),
-                      ],
+                        );
+                      },
                     ),
-                  ),
-                ],
+                    // 좋아요 수 텍스트 표시 (실시간 반영)
+                    StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                      stream: FirebaseFirestore.instance
+                          .collection('products')
+                          .doc(productId)
+                          .snapshots(),
+                      builder: (context, snapLikes) {
+                        int likeCount = 0;
+                        if (snapLikes.hasData && snapLikes.data!.exists) {
+                          final data = snapLikes.data!.data();
+                          likeCount = data?['likes'] is int ? data!['likes'] as int : 0;
+                        }
+                        return Text(
+                          '$likeCount',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           );
         },
       ),
