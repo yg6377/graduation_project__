@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:graduation_project_1/screen/product_comments.dart';
 import 'package:graduation_project_1/screen/chatroom_screen.dart';
 import 'package:graduation_project_1/screen/edit_product_screen.dart';
+import 'package:graduation_project_1/screen/sellerProfileScreen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final String productId;
@@ -216,38 +217,48 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              CircleAvatar(
-                                radius: 24,
-                                backgroundColor: Colors.grey.shade200,
-                                backgroundImage: (profileImage != null && profileImage.toString().isNotEmpty)
-                                    ? NetworkImage(profileImage)
-                                    : AssetImage('assets/images/default_profile.png') as ImageProvider,
-                              ),
-                              SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    nickname,
-                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Icon(Icons.place, size: 16, color: Colors.grey),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        region,
-                                        style: TextStyle(fontSize: 14, color: Colors.grey),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ],
+                          InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => SellerProfileScreen(sellerUid: widget.sellerUid),
+                                ),
+                              );
+                            },
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: Colors.grey.shade200,
+                                  backgroundImage: (profileImage != null && profileImage.toString().isNotEmpty)
+                                      ? NetworkImage(profileImage)
+                                      : AssetImage('assets/images/default_profile.png') as ImageProvider,
+                                ),
+                                SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      nickname,
+                                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.place, size: 16, color: Colors.grey),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          region,
+                                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                           SizedBox(height: 12),
                           Divider(color: Colors.grey.shade400),
@@ -256,7 +267,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     },
                   ),
                   SizedBox(height: 12),
-                  // Sale status badge and title
+                  // Sale status badge, condition badge, and title
                   FutureBuilder<DocumentSnapshot>(
                     future: FirebaseFirestore.instance.collection('products').doc(widget.productId).get(),
                     builder: (context, snapshot) {
@@ -265,6 +276,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       }
                       final data = snapshot.data!.data() as Map<String, dynamic>;
                       final saleStatus = data['saleStatus'] ?? 'selling';
+                      final condition = data['condition'] ?? '';
                       Widget? badge;
                       if (saleStatus == 'reserved') {
                         badge = Container(
@@ -298,17 +310,36 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             badge,
                             SizedBox(height: 6),
                           ],
-                          Text(
-                            widget.title,
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: saleStatus == 'reserved'
-                                  ? Colors.black
-                                  : saleStatus == 'soldout'
-                                      ? Colors.grey
-                                      : Colors.black,
-                            ),
+                          Row(
+                            children: [
+                              if (condition.isNotEmpty)
+                                Container(
+                                  margin: EdgeInsets.only(right: 8),
+                                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: _getConditionColor(condition),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    condition,
+                                    style: TextStyle(color: Colors.white, fontSize: 12),
+                                  ),
+                                ),
+                              Expanded(
+                                child: Text(
+                                  widget.title,
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: saleStatus == 'reserved'
+                                        ? Colors.black
+                                        : saleStatus == 'soldout'
+                                            ? Colors.grey
+                                            : Colors.black,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       );
@@ -478,3 +509,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 }
+  Color _getConditionColor(String condition) {
+    switch (condition) {
+      case 'S':
+        return Colors.green;
+      case 'A':
+        return Colors.blue;
+      case 'B':
+        return Colors.orange;
+      case 'C':
+        return Colors.deepOrange;
+      case 'D':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }

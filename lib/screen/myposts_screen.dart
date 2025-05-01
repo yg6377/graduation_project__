@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:graduation_project_1/screen/productlist_screen.dart';
 import 'ProductDetailScreen.dart'; // Replace with your actual import path
 
 class MyPostsScreen extends StatelessWidget {
@@ -40,11 +41,12 @@ class MyPostsScreen extends StatelessWidget {
               final data = posts[index].data() as Map<String, dynamic>;
               final condition = data['condition'] ?? '';
               final title = data['title'] ?? '';
-              final displayTitle = condition.isNotEmpty ? '[$condition] $title' : title;
+              final displayTitle = title;
               final imageUrl = data['imageUrl'] ?? '';
               final price = data['price']?.toString() ?? '';
               final nickname = data['userName'] ?? '';
               final region = data['region'] ?? '';
+              final saleStatus = data['saleStatus'] ?? '';
               final timestamp = data['timestamp']?.toDate();
 
               String formattedTime = 'Unknown';
@@ -53,13 +55,13 @@ class MyPostsScreen extends StatelessWidget {
                 if (difference.inDays > 7) {
                   formattedTime = '${timestamp.month}/${timestamp.day}/${timestamp.year}';
                 } else if (difference.inDays >= 1) {
-                  formattedTime = '${difference.inDays}일 전';
+                  formattedTime = '${difference.inDays}days before';
                 } else if (difference.inHours >= 1) {
-                  formattedTime = '${difference.inHours}시간 전';
+                  formattedTime = '${difference.inHours}hours before';
                 } else if (difference.inMinutes >= 1) {
-                  formattedTime = '${difference.inMinutes}분 전';
+                  formattedTime = '${difference.inMinutes}minutes before';
                 } else {
-                  formattedTime = '방금 전';
+                  formattedTime = 'a moment ago';
                 }
               }
 
@@ -86,40 +88,13 @@ class MyPostsScreen extends StatelessWidget {
                     ),
                   );
                 },
-                child: Card(
-                  margin: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  child: Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: SizedBox(
-                            width: 80,
-                            height: 80,
-                            child: imageUrl.isNotEmpty
-                                ? Image.network(imageUrl, fit: BoxFit.cover)
-                                : Icon(Icons.image, size: 80),
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(displayTitle, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                              SizedBox(height: 4),
-                              Text('$price NTD', style: TextStyle(fontSize: 16)),
-                              SizedBox(height: 4),
-                              Text('$nickname • $region', style: TextStyle(fontSize: 14, color: Colors.grey)),
-                              Text(formattedTime, style: TextStyle(fontSize: 12, color: Colors.grey)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                child: ProductCard(
+                  title: displayTitle,
+                  imageUrl: imageUrl,
+                  price: price,
+                  region: region,
+                  saleStatus: saleStatus,
+                  condition: condition,
                 ),
               );
             },

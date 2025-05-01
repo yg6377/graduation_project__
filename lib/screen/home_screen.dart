@@ -59,10 +59,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadUserRegion() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    print('🔥 현재 유저 UID: $uid');
     final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
     final regionFromUser = doc.data()?['region'];
-    print('🔥 Firestore에서 불러온 region: $regionFromUser');
+    print('🔥 유저 UID: $uid, 불러온 지역: $regionFromUser');
     if (_selectedRegion == null && regionFromUser != null) {
       setState(() {
         _selectedRegion = regionFromUser;
@@ -76,7 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     switch (_selectedIndex) {
       case 1:
-        return 'Chatting';
+        return 'Chat';
       case 2:
         return 'My Page';
       default:
@@ -115,14 +114,15 @@ class _HomeScreenState extends State<HomeScreen> {
             return Center(child: Text('추천 상품 로딩 실패: ${snapshot.error}'));
           }
           final recommended = snapshot.data ?? [];
-          for (final doc in recommended) {
-            final data = doc.data() as Map<String, dynamic>;
-            final title = data['title'] ?? '제목 없음';
-            print('✅ 추천 상품: $title');
-          }
+          // for (final doc in recommended) {
+          //   final data = doc.data() as Map<String, dynamic>;
+          //   final title = data['title'] ?? '제목 없음';
+          //   print('✅ 추천 상품: $title');
+          // }
           return ProductListScreen(
             key: ValueKey(_selectedRegion),
             region: _selectedRegion,
+            recommendedProducts: recommended,
           );
         },
       ),
@@ -212,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
           backgroundColor: Colors.white,
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: 'HOME'),
-            BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'CHATTING'),
+            BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'CHAT'),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'MY PAGE'),
           ],
         ),

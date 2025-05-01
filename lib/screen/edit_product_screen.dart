@@ -7,6 +7,8 @@ class EditScreen extends StatefulWidget {
   final String imageUrl;
   final String productId;
   final String price;
+  final String? condition;
+  final String? saleStatus;
 
   EditScreen({
     required this.title,
@@ -14,6 +16,8 @@ class EditScreen extends StatefulWidget {
     required this.imageUrl,
     required this.productId,
     required this.price,
+    this.condition,
+    this.saleStatus,
   });
 
   @override
@@ -25,6 +29,8 @@ class _EditScreenState extends State<EditScreen> {
   String? _editedTitle;
   String? _editedDescription;
   String? _editedPrice;
+  String _selectedCondition = 'S';
+  String _selectedSaleStatus = 'available';
 
   @override
   void initState() {
@@ -32,11 +38,14 @@ class _EditScreenState extends State<EditScreen> {
     _editedTitle = widget.title;
     _editedDescription = widget.description;
     _editedPrice = widget.price;
+    _selectedCondition = widget.condition ?? 'S';
+    _selectedSaleStatus = widget.saleStatus ?? 'available';
   }
 
   Future<void> _updateProduct() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+      _editedTitle = _editedTitle?.replaceAll(RegExp(r'^\[[A-E]\]\s*'), '');
       await FirebaseFirestore.instance
           .collection('products')
           .doc(widget.productId)
@@ -44,6 +53,8 @@ class _EditScreenState extends State<EditScreen> {
         'title': _editedTitle,
         'description': _editedDescription,
         'price': _editedPrice,
+        'condition': _selectedCondition,
+        'saleStatus': _selectedSaleStatus,
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -72,6 +83,38 @@ class _EditScreenState extends State<EditScreen> {
           key: _formKey,
           child: Column(
             children: <Widget>[
+              DropdownButtonFormField<String>(
+                value: _selectedCondition,
+                decoration: InputDecoration(labelText: 'Condition'),
+                items: ['S', 'A', 'B', 'C', 'D'].map((condition) {
+                  return DropdownMenuItem<String>(
+                    value: condition,
+                    child: Text('Condition $condition'),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedCondition = value!;
+                  });
+                },
+              ),
+
+              DropdownButtonFormField<String>(
+                value: _selectedSaleStatus,
+                decoration: InputDecoration(labelText: 'Sale Status'),
+                items: ['available', 'reserved', 'sold'].map((status) {
+                  return DropdownMenuItem<String>(
+                    value: status,
+                    child: Text(status[0].toUpperCase() + status.substring(1)),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedSaleStatus = value!;
+                  });
+                },
+              ),
+
               TextFormField(
                 initialValue: _editedTitle,
                 decoration: InputDecoration(labelText: 'Title'),
