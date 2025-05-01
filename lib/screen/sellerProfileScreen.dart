@@ -19,7 +19,7 @@ class SellerProfileScreen extends StatelessWidget {
 
           final userData = snapshot.data!.data() as Map<String, dynamic>;
           final nickname = userData['nickname'] ?? '닉네임 없음';
-          final profileImage = userData['profileImage'] ?? '';
+          final profileImageUrl = userData['profileImageUrl'] ?? '';
           final region = userData['region'] ?? '지역 미설정';
 
           return Column(
@@ -27,8 +27,8 @@ class SellerProfileScreen extends StatelessWidget {
               SizedBox(height: 16),
               CircleAvatar(
                 radius: 40,
-                backgroundImage: profileImage.isNotEmpty
-                    ? NetworkImage(profileImage)
+                backgroundImage: profileImageUrl.isNotEmpty
+                    ? NetworkImage(profileImageUrl)
                     : AssetImage('assets/images/default_profile.png') as ImageProvider,
               ),
               SizedBox(height: 12),
