@@ -4,7 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'ProductUploadScreen.dart';
-import 'package:graduation_project_1/screen/productlist_screen.dart'; // Show 구문 제거
+import 'package:graduation_project_1/screen/productlist_screen.dart';
 import 'ProductDetailScreen.dart';
 import 'package:graduation_project_1/screen/chatlist_Screen.dart';
 import 'package:graduation_project_1/screen/mypage_screen.dart';
@@ -17,7 +17,26 @@ import 'recommendation_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(MaterialApp(home: HomeScreen()));
+  runApp(MaterialApp(
+    theme: ThemeData(
+      scaffoldBackgroundColor: Colors.white,
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: IconThemeData(color: Colors.blue),
+        titleTextStyle: TextStyle(color: Colors.blue, fontSize: 20, fontWeight: FontWeight.bold),
+      ),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: Colors.white,
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: Colors.blue,
+      ),
+    ),
+    home: HomeScreen(),
+  ));
 }
 
 class HomeScreen extends StatefulWidget {
@@ -84,7 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
         await FirebaseFirestore.instance.collection('users').doc(uid).update({'region': newRegion});
         print('🔥 사용자 지역 업데이트 완료: $newRegion');
       }
-      setState(() {}); // To refresh ProductListScreen
+      setState(() {}); // Refresh ProductListScreen
     }
   }
 
@@ -127,46 +146,22 @@ class _HomeScreenState extends State<HomeScreen> {
               builder: (context) => SimpleDialog(
                 title: Text('Select Region'),
                 children: [
-                  SimpleDialogOption(
-                    onPressed: () => Navigator.pop(context, 'Danshui'),
-                    child: Text('Danshui'),
-                  ),
-                  SimpleDialogOption(
-                    onPressed: () => Navigator.pop(context, 'Taipei'),
-                    child: Text('Taipei'),
-                  ),
-                  SimpleDialogOption(
-                    onPressed: () => Navigator.pop(context, 'New Taipei'),
-                    child: Text('New Taipei'),
-                  ),
-                  SimpleDialogOption(
-                    onPressed: () => Navigator.pop(context, 'Kaohsiung'),
-                    child: Text('Kaohsiung'),
-                  ),
-                  SimpleDialogOption(
-                    onPressed: () => Navigator.pop(context, 'Taichung'),
-                    child: Text('Taichung'),
-                  ),
-                  SimpleDialogOption(
-                    onPressed: () => Navigator.pop(context, 'Tainan'),
-                    child: Text('Tainan'),
-                  ),
-                  SimpleDialogOption(
-                    onPressed: () => Navigator.pop(context, 'Hualien'),
-                    child: Text('Hualien'),
-                  ),
-                  SimpleDialogOption(
-                    onPressed: () => Navigator.pop(context, 'Keelung'),
-                    child: Text('Keelung'),
-                  ),
-                  SimpleDialogOption(
-                    onPressed: () => Navigator.pop(context, 'Taoyuan'),
-                    child: Text('Taoyuan'),
-                  ),
-                  SimpleDialogOption(
-                    onPressed: () => Navigator.pop(context, 'Hsinchu'),
-                    child: Text('Hsinchu'),
-                  ),
+                  for (final region in [
+                    'Danshui',
+                    'Taipei',
+                    'New Taipei',
+                    'Kaohsiung',
+                    'Taichung',
+                    'Tainan',
+                    'Hualien',
+                    'Keelung',
+                    'Taoyuan',
+                    'Hsinchu',
+                  ])
+                    SimpleDialogOption(
+                      onPressed: () => Navigator.pop(context, region),
+                      child: Text(region),
+                    ),
                 ],
               ),
             );
@@ -204,8 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Column(
         children: [
-          if (_selectedIndex == 0)
-            SizedBox(height: 12),
+          if (_selectedIndex == 0) SizedBox(height: 12),
           Expanded(child: pages[_selectedIndex]),
         ],
       ),
@@ -220,29 +214,19 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'MY PAGE'),
         ],
       ),
-      floatingActionButton: Stack(
-        children: [
-          Align(
-            alignment: Alignment.bottomRight,
-            child: FloatingActionButton(
-              heroTag: 'uploadProduct',
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ProductUploadScreen()),
-                );
-                // ProductUploadScreen에서 상품 업로드 후 HomeScreen으로 돌아올 때,
-                // 현재 지역의 상품 목록을 다시 로드하기 위해 setState를 호출합니다.
-                if (result != null && result == true) {
-                  // result가 true이면 상품 업로드가 완료되었음을 의미합니다.
-                  setState(() {});
-                }
-              },
-              child: Icon(Icons.add),
-              tooltip: 'Upload Product',
-            ),
-          ),
-        ],
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'uploadProduct',
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => ProductUploadScreen()),
+          );
+          if (result != null && result == true) {
+            setState(() {});
+          }
+        },
+        child: Icon(Icons.add),
+        tooltip: 'Upload Product',
       ),
     );
   }
