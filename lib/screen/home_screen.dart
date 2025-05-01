@@ -1,11 +1,14 @@
+// lib/screen/home_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'chatlist_screen.dart';
-import 'mypage_screen.dart';
-import 'productlist_screen.dart';
 import 'ProductUploadScreen.dart';
+import 'package:graduation_project_1/screen/productlist_screen.dart';
+import 'ProductDetailScreen.dart';
+import 'package:graduation_project_1/screen/chatlist_Screen.dart';
+import 'package:graduation_project_1/screen/mypage_screen.dart';
 import 'recommendation_service.dart';
 
 Future<void> main() async {
@@ -23,6 +26,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   String? _selectedRegion;
+  bool _showOnlyAvailable = false;
 
   @override
   void initState() {
@@ -37,15 +41,21 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _selectedRegion = doc.data()?['region']);
   }
 
+  Future<void> _changeRegion(String? region) async {
+    if (region != null && region != _selectedRegion) {
+      setState(() => _selectedRegion = region);
+    }
+  }
+
   void _onItemTapped(int index) {
     if (index == 0) _loadUserRegion();
     setState(() => _selectedIndex = index);
   }
 
-  String _getTitle() {
+  String _getAppBarTitle() {
     switch (_selectedIndex) {
       case 0:
-        return 'Location: ${_selectedRegion ?? "<Select>"}';
+        return ''; // we render custom Row
       case 1:
         return 'Chat';
       case 2:
@@ -58,15 +68,83 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      ProductListScreen(region: _selectedRegion),
+      ProductListScreen(
+        region: _selectedRegion,
+        showOnlyAvailable: _showOnlyAvailable,
+      ),
       ChatListScreen(),
       MyPageScreen(),
     ];
 
     return Scaffold(
+      backgroundColor: Color(0xFFEAF6FF),
       appBar: AppBar(
-        title: Text(_getTitle()),
-        backgroundColor: Colors.white,
+        automaticallyImplyLeading: false,
+        backgroundColor: Color(0xFFEAF6FF),
+        title: _selectedIndex == 0
+            ? Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () async {
+                  final selected = await showDialog<String>(
+                    context: context,
+                    builder: (_) => SimpleDialog(
+                      title: Text('Select Region'),
+                      children: [
+                        for (final r in [
+                          'Danshui', 'Taipei', 'New Taipei',
+                          'Kaohsiung', 'Taichung', 'Tainan',
+                          'Hualien', 'Keelung', 'Taoyuan', 'Hsinchu',
+                        ])
+                          SimpleDialogOption(
+                            onPressed: () => Navigator.pop(context, r),
+                            child: Text(r),
+                          ),
+                      ],
+                    ),
+                  );
+                  await _changeRegion(selected);
+                },
+                child: Row(
+                  children: [
+                    Text(
+                      _selectedRegion ?? '<Select Region>',
+                      style: TextStyle(
+                        color: Color(0xFF3B82F6),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Icon(Icons.arrow_drop_down, color: Color(0xFF3B82F6)),
+                  ],
+                ),
+              ),
+            ),
+            Text('Available Only',
+                style: TextStyle(color: Color(0xFF3B82F6))),
+            Checkbox(
+              value: _showOnlyAvailable,
+              onChanged: (v) =>
+                  setState(() => _showOnlyAvailable = v ?? false),
+              activeColor: Color(0xFF3B82F6),
+            ),
+          ],
+        )
+            : Text(_getAppBarTitle()),
+        actions: [
+          if (_selectedIndex == 0) ...[
+            IconButton(
+              icon: Icon(Icons.search, color: Color(0xFF3B82F6)),
+              onPressed: () => Navigator.pushNamed(context, '/search'),
+            ),
+            IconButton(
+              icon: Icon(Icons.notifications, color: Color(0xFF3B82F6)),
+              onPressed: () => Navigator.pushNamed(context, '/notification'),
+            ),
+          ],
+        ],
+        elevation: 0,
       ),
       body: pages[_selectedIndex],
       bottomNavigationBar: Card(
@@ -78,10 +156,10 @@ class _HomeScreenState extends State<HomeScreen> {
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
           type: BottomNavigationBarType.fixed,
+          selectedItemColor: Color(0xFF3B82F6),
+          unselectedItemColor: Colors.grey,
           selectedFontSize: 14,
           unselectedFontSize: 14,
-          selectedLabelStyle: TextStyle(fontSize: 14),
-          unselectedLabelStyle: TextStyle(fontSize: 14),
           items: [
             BottomNavigationBarItem(
               icon: Icon(Icons.home, size: 24),
@@ -110,10 +188,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (totalUnread > 0)
                         Positioned(
                           right: -5,
-                          top: -5,
+                          top: -4,
                           child: Container(
                             padding: EdgeInsets.all(2),
-                            decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
                             constraints: BoxConstraints(minWidth: 16, minHeight: 16),
                             child: Center(
                               child: Text(
@@ -138,6 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'uploadProduct',
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => ProductUploadScreen()),
