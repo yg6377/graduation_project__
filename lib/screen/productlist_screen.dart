@@ -40,7 +40,7 @@ class ProductListScreen extends StatelessWidget {
               final String productId = productData['productId'] ?? product.id;
               final String title = productData['title'] ?? '';
               final String condition = productData['condition'] ?? '';
-              final String price = productData['price'] ?? '';
+              final String price = (productData['price'] ?? '').toString();
               final String imageUrl = productData['imageUrl'] ?? '';
               final int likes = int.tryParse(productData['likes'].toString()) ?? 0;
               final String description = productData['description'] ?? '';
@@ -71,7 +71,7 @@ class ProductListScreen extends StatelessWidget {
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('$price NTD', style: TextStyle(fontSize: 16)),
+                            Text('NTD${price.toString()} ', style: TextStyle(fontSize: 16)),
                             FutureBuilder<DocumentSnapshot>(
                               future: FirebaseFirestore.instance.collection('users').doc(sellerUid).get(),
                               builder: (context, snapshot) {
