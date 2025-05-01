@@ -85,66 +85,71 @@ class ChatListScreen extends StatelessWidget {
                 future: fetchNickname(otherUid),
                 builder: (context, snapshot) {
                   final nickname = snapshot.data ?? 'Loading...';
-                  final location = data['location'] ?? 'No location info';
+                  final region = data['region'] ?? 'No region info';
                   final lastMessage = data['lastMessage'] ?? '';
                   final lastTime = data['lastTime'] as Timestamp?;
                   final profileImageUrl = data['profileImageUrl'] ?? '';
                   final timeString = formatLastTime(lastTime);
 
-                  return Dismissible(
-                    key: ValueKey(doc.id),
-                    direction: DismissDirection.endToStart,
-                    confirmDismiss: (_) async {
-                      await _confirmAndDelete(context, doc.id);
-                      return false;
-                    },
-                    background: Container(
-                      color: Colors.red,
-                      alignment: Alignment.centerRight,
-                      padding: EdgeInsets.symmetric(horizontal: 20),
-                      child: Icon(Icons.delete, color: Colors.white),
-                    ),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundImage: profileImageUrl.isNotEmpty
-                            ? NetworkImage(profileImageUrl)
-                            : AssetImage('assets/default_profile.png') as ImageProvider,
-                        radius: 25,
-                      ),
-                      title: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '$nickname ($location)',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                  return Column(
+                    children: [
+                      Dismissible(
+                        key: ValueKey(doc.id),
+                        direction: DismissDirection.endToStart,
+                        confirmDismiss: (_) async {
+                          await _confirmAndDelete(context, doc.id);
+                          return false;
+                        },
+                        background: Container(
+                          color: Colors.red,
+                          alignment: Alignment.centerRight,
+                          padding: EdgeInsets.symmetric(horizontal: 20),
+                          child: Icon(Icons.delete, color: Colors.white),
+                        ),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundImage: profileImageUrl.isNotEmpty
+                                ? NetworkImage(profileImageUrl)
+                                : AssetImage('assets/images/default_profile.png') as ImageProvider,
+                            radius: 25,
                           ),
-                          Text(
-                            timeString,
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          title: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '$nickname ($region)',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                timeString,
+                                style: TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      subtitle: Text(
-                        lastMessage,
-                        style: TextStyle(fontSize: 13, color: Colors.black),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ChatRoomScreen(
-                              chatRoomId: doc.id,
-                              userName: nickname,
-                              productTitle: '',
-                              productImageUrl: '',
-                              productPrice: '',
-                            ),
+                          subtitle: Text(
+                            lastMessage,
+                            style: TextStyle(fontSize: 13, color: Colors.black),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        );
-                      },
-                    ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ChatRoomScreen(
+                                  chatRoomId: doc.id,
+                                  userName: nickname,
+                                  productTitle: '',
+                                  productImageUrl: '',
+                                  productPrice: '',
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      Divider(height: 1, thickness: 2),
+                    ],
                   );
                 },
               );
