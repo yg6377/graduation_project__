@@ -49,6 +49,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   String? _selectedRegion;
+  bool _showOnlyAvailable = false;
 
   @override
   void initState() {
@@ -123,6 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
             key: ValueKey(_selectedRegion),
             region: _selectedRegion,
             recommendedProducts: recommended,
+            showOnlyAvailable: _showOnlyAvailable,
           );
         },
       ),
@@ -136,46 +138,63 @@ class _HomeScreenState extends State<HomeScreen> {
         automaticallyImplyLeading: false,
         backgroundColor: Color(0xFFEAF6FF),
         title: _selectedIndex == 0
-            ? GestureDetector(
-          onTap: () async {
-            final selected = await showDialog<String>(
-              context: context,
-              builder: (context) => SimpleDialog(
-                title: Text('Select Region'),
+            ? Row(
                 children: [
-                  for (final region in [
-                    'Danshui',
-                    'Taipei',
-                    'New Taipei',
-                    'Kaohsiung',
-                    'Taichung',
-                    'Tainan',
-                    'Hualien',
-                    'Keelung',
-                    'Taoyuan',
-                    'Hsinchu',
-                  ])
-                    SimpleDialogOption(
-                      onPressed: () => Navigator.pop(context, region),
-                      child: Text(region),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () async {
+                        final selected = await showDialog<String>(
+                          context: context,
+                          builder: (context) => SimpleDialog(
+                            title: Text('Select Region'),
+                            children: [
+                              for (final region in [
+                                'Danshui',
+                                'Taipei',
+                                'New Taipei',
+                                'Kaohsiung',
+                                'Taichung',
+                                'Tainan',
+                                'Hualien',
+                                'Keelung',
+                                'Taoyuan',
+                                'Hsinchu',
+                              ])
+                                SimpleDialogOption(
+                                  onPressed: () => Navigator.pop(context, region),
+                                  child: Text(region),
+                                ),
+                            ],
+                          ),
+                        );
+                        if (selected != null) {
+                          await _changeRegion(selected);
+                        }
+                      },
+                      child: Row(
+                        children: [
+                          Text(
+                            _selectedRegion ?? '<Select Region>',
+                            style: TextStyle(color: Color(0xFF3B82F6), fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          Icon(Icons.arrow_drop_down, color: Color(0xFF3B82F6)),
+                        ],
+                      ),
                     ),
+                  ),
+                  Text('Available Only', style: TextStyle(color: Color(0xFF3B82F6))),
+                  Checkbox(
+                    value: _showOnlyAvailable,
+                    onChanged: (value) {
+                      setState(() {
+                        _showOnlyAvailable = value ?? false;
+                      });
+                    },
+                    activeColor: Color(0xFF3B82F6),
+                  ),
+
                 ],
-              ),
-            );
-            if (selected != null) {
-              await _changeRegion(selected);
-            }
-          },
-          child: Row(
-            children: [
-              Text(
-                _selectedRegion ?? '<Select Region>',
-                style: TextStyle(color: Color(0xFF3B82F6), fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              Icon(Icons.arrow_drop_down, color: Color(0xFF3B82F6)),
-            ],
-          ),
-        )
+              )
             : Text(_getAppBarTitle()),
         actions: [
           IconButton(

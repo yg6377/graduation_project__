@@ -22,20 +22,21 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   // 초기 오프셋을 크게 줘서 리스트가 맨 아래(최신 메시지)에서 시작하도록 함
   final ScrollController _scrollController =
   ScrollController(initialScrollOffset: 1000000);
-
   final TextEditingController _messageController = TextEditingController();
   final User? _currentUser = FirebaseAuth.instance.currentUser;
   late StreamSubscription<QuerySnapshot> _msgSub;
 
-  String _myNickname        = '나';
+  String _myNickname = '나';
   String _otherUserNickname = '상대방';
   late String otherUid;
+  String _saleStatus = 'selling';
 
   @override
   void initState() {
     super.initState();
     _loadNicknames();
     _listenForNewMessages();
+    _loadSaleStatus();
   }
 
   @override
@@ -58,12 +59,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         .listen((snap) {
       for (var change in snap.docChanges) {
         if (change.type == DocumentChangeType.added) {
-          final data   = change.doc.data()! as Map<String, dynamic>;
-          final sender = data['sender'] as String;
+          final msg = change.doc.data()! as Map<String, dynamic>;
+          final sender = msg['sender'] as String;
+          final text = msg['text'] as String;
           if (sender != meUid && mounted) {
             Flushbar(
               title: '새 메시지',
-              message: data['text'] as String,
+              message: text,
               duration: Duration(seconds: 3),
               flushbarPosition: FlushbarPosition.TOP,
               margin: EdgeInsets.all(8),
@@ -78,16 +80,35 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   Future<void> _loadNicknames() async {
     final meUid = _currentUser?.uid ?? '';
     final parts = widget.chatRoomId.split('_');
-    otherUid    = parts.firstWhere((u) => u != meUid, orElse: () => '');
+    otherUid = parts.firstWhere((u) => u != meUid, orElse: () => '');
 
-    final myDoc = await FirebaseFirestore.instance.collection('users').doc(meUid).get();
+    final myDoc =
+    await FirebaseFirestore.instance.collection('users').doc(meUid).get();
     if (myDoc.exists && myDoc.data()!.containsKey('nickname')) {
       _myNickname = myDoc['nickname'];
     }
 
-    final otherDoc = await FirebaseFirestore.instance.collection('users').doc(otherUid).get();
+    final otherDoc =
+    await FirebaseFirestore.instance.collection('users').doc(otherUid).get();
     if (otherDoc.exists && otherDoc.data()!.containsKey('nickname')) {
-      setState(() => _otherUserNickname = otherDoc['nickname']);
+      setState(() {
+        _otherUserNickname = otherDoc['nickname'];
+      });
+    }
+  }
+
+  Future<void> _loadSaleStatus() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('chatRooms')
+        .doc(widget.chatRoomId)
+        .get();
+    if (doc.exists) {
+      final map = doc.data()!;
+      if (map.containsKey('saleStatus')) {
+        setState(() {
+          _saleStatus = map['saleStatus'] as String;
+        });
+      }
     }
   }
 
@@ -95,43 +116,47 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty || _currentUser == null) return;
 
+    final myUid = _currentUser!.uid;
     final chatRef = FirebaseFirestore.instance
         .collection('chatRooms')
         .doc(widget.chatRoomId);
 
     await chatRef.collection('message').add({
-      'text':      text,
-      'sender':    _currentUser!.uid,
+      'text': text,
+      'sender': myUid,
       'timestamp': FieldValue.serverTimestamp(),
     });
+
+    // lastMessage, lastTime 업데이트
     await chatRef.update({
       'lastMessage': text,
-      'lastTime':    FieldValue.serverTimestamp(),
+      'lastTime': FieldValue.serverTimestamp(),
     });
 
     _messageController.clear();
   }
 
   Widget _buildMessageItem(QueryDocumentSnapshot doc) {
-    final data   = doc.data()! as Map<String, dynamic>;
+    final data = doc.data()! as Map<String, dynamic>;
     final isMine = data['sender'] == _currentUser?.uid;
-    final nick   = isMine ? _myNickname : _otherUserNickname;
+    final nick = isMine ? _myNickname : _otherUserNickname;
 
     // 시간 포맷
     String timeString = '';
     if (data['timestamp'] != null) {
       final dt = (data['timestamp'] as Timestamp).toDate();
-      timeString = '${dt.hour.toString().padLeft(2,'0')}:'
-          '${dt.minute.toString().padLeft(2,'0')}';
+      final h = dt.hour.toString().padLeft(2, '0');
+      final m = dt.minute.toString().padLeft(2, '0');
+      timeString = '$h:$m';
     }
 
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin:  EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 12),
         padding: EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color:       isMine ? Colors.blue[200] : Colors.grey[300],
+          color: isMine ? Colors.blue[200] : Colors.grey[300],
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -143,9 +168,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(nick,       style: TextStyle(fontSize: 12, color: Colors.black54)),
+                Text(nick, style: TextStyle(fontSize: 12, color: Colors.black54)),
                 SizedBox(width: 6),
-                Text(timeString, style: TextStyle(fontSize: 10, color: Colors.black45)),
+                Text(timeString,
+                    style: TextStyle(fontSize: 10, color: Colors.black45)),
               ],
             ),
           ],
@@ -162,32 +188,123 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           .snapshots(),
       builder: (ctx, snap) {
         if (!snap.hasData || !snap.data!.exists) return SizedBox.shrink();
-        final data  = snap.data!.data()! as Map<String, dynamic>;
-        final title = data['productTitle']    as String? ?? '';
-        final img   = data['productImageUrl'] as String? ?? '';
-        final price = data['productPrice']    as String? ?? '';
+        final data = snap.data!.data()! as Map<String, dynamic>;
+        final title = data['productTitle'] as String? ?? '';
+        final img = data['productImageUrl'] as String? ?? '';
+        final price = data['productPrice'] as String? ?? '';
+        final saleStatusFromDb = data['saleStatus'] as String? ?? 'selling';
+        final productId = data['productId'] as String? ?? '';
+        final sellerUid = data['sellerUid'] as String? ?? '';
+
+        // saleStatus가 바뀌면 state 갱신
+        if (_saleStatus != saleStatusFromDb) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _saleStatus = saleStatusFromDb;
+              });
+            }
+          });
+        }
+
         if (title.isEmpty) return SizedBox.shrink();
-        return Container(
-          color:  Colors.grey[100],
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              if (img.isNotEmpty)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: Image.network(img, width:50, height:50, fit:BoxFit.cover),
+
+        return Column(
+          children: [
+            Divider(height: 1),
+            GestureDetector(
+              onTap: () {
+                // 상품 상세로 이동하려면 여기에 Navigator.push
+              },
+              child: Container(
+                color: Color(0xFFCCE5FF),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (img.isNotEmpty)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child:
+                        Image.network(img, width: 50, height: 50, fit: BoxFit.cover),
+                      ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              // 판매자가 본인일 때 상태 변경 드롭다운
+                              if (_currentUser?.uid == sellerUid)
+                                DropdownButton<String>(
+                                  value: _saleStatus,
+                                  items: [
+                                    DropdownMenuItem(value: 'selling', child: Text('Selling')),
+                                    DropdownMenuItem(value: 'reserved', child: Text('Reserved')),
+                                    DropdownMenuItem(value: 'soldout', child: Text('Sold Out')),
+                                  ],
+                                  onChanged: (value) async {
+                                    if (value == null || value == _saleStatus) return;
+                                    final chatRef = FirebaseFirestore.instance
+                                        .collection('chatRooms')
+                                        .doc(widget.chatRoomId);
+                                    await chatRef.update({'saleStatus': value});
+                                    if (productId.isNotEmpty) {
+                                      await FirebaseFirestore.instance
+                                          .collection('products')
+                                          .doc(productId)
+                                          .update({'saleStatus': value});
+                                    }
+                                    setState(() {
+                                      _saleStatus = value;
+                                    });
+                                    // reserved/soldout 시 추가 메시지나 dialog 처리…
+                                  },
+                                )
+                              else
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: _saleStatus == 'soldout'
+                                        ? Colors.grey
+                                        : _saleStatus == 'reserved'
+                                        ? Colors.lightBlueAccent
+                                        : Colors.green,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    _saleStatus.toUpperCase(),
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  style: TextStyle(
+                                      fontSize: 16, fontWeight: FontWeight.bold),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 4),
+                          Text('$price NTD',
+                              style: TextStyle(
+                                  fontSize: 14, color: Colors.grey[700])),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              SizedBox(width:12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: TextStyle(fontSize:16, fontWeight: FontWeight.bold)),
-                  SizedBox(height:4),
-                  Text('$price원', style: TextStyle(fontSize:14, color:Colors.grey[700])),
-                ],
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
@@ -218,6 +335,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   return Center(child: CircularProgressIndicator());
                 }
                 final messages = snap.data!.docs;
+                if (messages.isEmpty) {
+                  return Center(child: Text('대화가 없습니다.'));
+                }
                 return ListView.builder(
                   controller: _scrollController,
                   itemCount: messages.length,
@@ -235,13 +355,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     controller: _messageController,
                     decoration: InputDecoration(
                       hintText: '메시지 입력...',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8)),
                     ),
                     onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
                 SizedBox(width: 8),
-                IconButton(icon: Icon(Icons.send, color: Colors.blue), onPressed: _sendMessage),
+                IconButton(
+                    icon: Icon(Icons.send, color: Colors.blue),
+                    onPressed: _sendMessage),
               ],
             ),
           ),
@@ -250,9 +373,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     );
   }
 }
-
-
-
 
 
 
