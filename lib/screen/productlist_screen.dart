@@ -173,7 +173,8 @@ class ProductCard extends StatelessWidget {
 class ProductListScreen extends StatefulWidget {
   final String? region;
   final List<DocumentSnapshot>? recommendedProducts;
-  const ProductListScreen({Key? key, this.region, this.recommendedProducts}) : super(key: key);
+  final bool showOnlyAvailable;
+  const ProductListScreen({Key? key, this.region, this.recommendedProducts, this.showOnlyAvailable = false}) : super(key: key);
 
   @override
   State<ProductListScreen> createState() => _ProductListScreenState();
@@ -338,17 +339,35 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
     final showRecommended = widget.recommendedProducts != null && widget.recommendedProducts!.isNotEmpty;
 
+    // Filter recommended products if showOnlyAvailable is true
+    final filteredRecommended = showRecommended && widget.showOnlyAvailable
+        ? widget.recommendedProducts!.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final saleStatus = data['saleStatus'] ?? '';
+            return saleStatus != 'reserved' && saleStatus != 'soldout';
+          }).toList()
+        : widget.recommendedProducts;
+
+    // Filter _products if showOnlyAvailable is true
+    final filteredProducts = widget.showOnlyAvailable
+        ? _products.where((product) {
+            final productData = product.data() as Map<String, dynamic>;
+            final saleStatus = productData['saleStatus'] ?? '';
+            return saleStatus != 'reserved' && saleStatus != 'soldout';
+          }).toList()
+        : _products;
+
     return Scaffold(
       body: Container(
         color: Color(0xFFEAF6FF),
         child: ListView(
           children: [
-            if (showRecommended) ...[
+            if (filteredRecommended != null && filteredRecommended.isNotEmpty) ...[
               Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Text('For you', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
-              ...widget.recommendedProducts!.map((doc) {
+              ...filteredRecommended.map((doc) {
                 final data = doc.data() as Map<String, dynamic>;
                 final title = data['title'] ?? '';
                 final condition = data['condition'] ?? '';
@@ -409,8 +428,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 );
               }).toList(),
             ],
-            ...List.generate(_products.length, (index) {
-              final product = _products[index];
+            ...List.generate(filteredProducts.length, (index) {
+              final product = filteredProducts[index];
               final productData = product.data() as Map<String, dynamic>;
 
               final timestampValue = productData['timestamp'];
