@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'ProductDetailScreen.dart';
 
@@ -13,12 +15,56 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   TextEditingController _searchController = TextEditingController();
   List<String> _recentSearches = []; // 🔹 Initially empty list
+  bool _isLoading = true;
 
-  void _addRecentSearch(String query) {
+  @override
+  void initState() {
+    super.initState();
+    _loadRecentSearches();
+  }
+
+  Future<void> _loadRecentSearches() async {
+    final user = FirebaseAuth.instance.currentUser;
+    SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
-      if (!_recentSearches.contains(query)) {
-        _recentSearches.insert(0, query);
-      }
+      _recentSearches = prefs.getStringList('recentSearches_${user!.uid}') ?? [];
+      _isLoading = false;
+    });
+  }
+
+  void _addRecentSearch(String query) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final lowerQuery = query.toLowerCase();
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> existing = prefs.getStringList('recentSearches_${user.uid}') ?? [];
+
+    // Remove case-insensitive duplicates
+    existing.removeWhere((q) => q.toLowerCase() == lowerQuery);
+
+    // Insert at front
+    existing.insert(0, query);
+
+    // Limit to max 10
+    if (existing.length > 10) {
+      existing = existing.sublist(0, 10);
+    }
+
+    await prefs.setStringList('recentSearches_${user.uid}', existing);
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('searchHistory')
+        .add({
+          'keyword': query,
+          'searchedAt': Timestamp.now(),
+        });
+
+    // Update UI
+    setState(() {
+      _recentSearches = existing;
     });
   }
 
@@ -73,45 +119,50 @@ class _SearchScreenState extends State<SearchScreen> {
           ],
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Recent Searches', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            SizedBox(height: 8),
-            Expanded(
-              child: _recentSearches.isEmpty
-                  ? Center(
-                child: Text(
-                  'No recent searches.',
-                  style: TextStyle(fontSize: 14, color: Colors.grey),
-                ),
-              )
-                  : ListView.builder(
-                itemCount: _recentSearches.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(_recentSearches[index]),
-                    trailing: IconButton(
-                      icon: Icon(Icons.close),
-                      onPressed: () {
-                        setState(() {
-                          _recentSearches.removeAt(index);
-                        });
-                      },
-                    ),
-                    onTap: () {
-                      _searchController.text = _recentSearches[index];
-                      _search(); // Execute search with selected keyword
-                    },
-                  );
-                },
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Recent Searches', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 8),
+                  Expanded(
+                    child: _recentSearches.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No recent searches.',
+                              style: TextStyle(fontSize: 14, color: Colors.grey),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: _recentSearches.length,
+                            itemBuilder: (context, index) {
+                              return ListTile(
+                                title: Text(_recentSearches[index]),
+                                trailing: IconButton(
+                                  icon: Icon(Icons.close),
+                                  onPressed: () async {
+                                    setState(() {
+                                      _recentSearches.removeAt(index);
+                                    });
+                                    final user = FirebaseAuth.instance.currentUser;
+                                    SharedPreferences prefs = await SharedPreferences.getInstance();
+                                    prefs.setStringList('recentSearches_${user!.uid}', _recentSearches);
+                                  },
+                                ),
+                                onTap: () {
+                                  _searchController.text = _recentSearches[index];
+                                  _search();
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -154,7 +205,7 @@ class SearchResultScreen extends StatelessWidget {
                   child: Center(
                     child: imageUrl.isNotEmpty
                         ? Image.network(imageUrl, fit: BoxFit.cover)
-                        : Image.asset('assets/images/no_image_pig.png', fit: BoxFit.cover),
+                        : Image.asset('assets/images/no image.png', fit: BoxFit.cover),
                   ),
                 ),
                 title: Text(title, style: TextStyle(fontSize: 18)),

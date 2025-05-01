@@ -52,7 +52,6 @@ class ChatListScreen extends StatelessWidget {
     final currentUid = FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
-      appBar: AppBar(title: Text("Chat List")),
       body: StreamBuilder(
         stream: FirebaseFirestore.instance.collection('chatRooms').snapshots(),
         builder: (context, snapshot) {

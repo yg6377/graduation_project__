@@ -10,24 +10,27 @@ class FavoriteListScreen extends StatelessWidget {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return [];
 
-    final likedProductRefs = await FirebaseFirestore.instance
+    // Get liked product IDs
+    final likedRefs = await FirebaseFirestore.instance
         .collection('users')
         .doc(currentUser.uid)
         .collection('likedProducts')
         .get();
 
-    final productSnapshots = await Future.wait(
-      likedProductRefs.docs.map((doc) async {
-        final productId = doc.id;
-        final productDoc = await FirebaseFirestore.instance
-            .collection('products')
-            .doc(productId)
-            .get();
-        return productDoc.exists ? productDoc : null;
-      }).where((e) => e != null),
-    );
+    // Fetch each product document
+    final futures = likedRefs.docs.map((doc) async {
+      final productDoc = await FirebaseFirestore.instance
+          .collection('products')
+          .doc(doc.id)
+          .get();
+      return productDoc.exists ? productDoc : null;
+    }).toList();
 
-    return productSnapshots.cast<DocumentSnapshot>();
+    // Await all fetches
+    final results = await Future.wait(futures);
+
+    // Filter out any nulls and cast to DocumentSnapshot
+    return results.whereType<DocumentSnapshot>().toList();
   }
 
   @override
