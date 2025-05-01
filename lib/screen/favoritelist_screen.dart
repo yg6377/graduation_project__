@@ -64,7 +64,7 @@ class FavoriteListScreen extends StatelessWidget {
               final data = products[index].data() as Map<String, dynamic>;
               final condition = data['condition'] ?? '';
               final title = data['title'] ?? '';
-              final displayTitle = condition.isNotEmpty ? '[$condition] $title' : title;
+              final displayTitle = title;
               final saleStatus = data['saleStatus'] ?? '';
               final region = data['region'] ?? '';
               return Card(
@@ -75,6 +75,7 @@ class FavoriteListScreen extends StatelessWidget {
                   price: (data['price'] ?? '').toString(),
                   region: region,
                   saleStatus: saleStatus,
+                  condition: condition,
                   onTap: () {
                     Navigator.push(
                       context,

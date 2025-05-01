@@ -45,6 +45,7 @@ class _EditScreenState extends State<EditScreen> {
   Future<void> _updateProduct() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+      _editedTitle = _editedTitle?.replaceAll(RegExp(r'^\[[A-E]\]\s*'), '');
       await FirebaseFirestore.instance
           .collection('products')
           .doc(widget.productId)

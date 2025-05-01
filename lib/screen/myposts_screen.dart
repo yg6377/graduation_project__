@@ -41,7 +41,7 @@ class MyPostsScreen extends StatelessWidget {
               final data = posts[index].data() as Map<String, dynamic>;
               final condition = data['condition'] ?? '';
               final title = data['title'] ?? '';
-              final displayTitle = condition.isNotEmpty ? '[$condition] $title' : title;
+              final displayTitle = title;
               final imageUrl = data['imageUrl'] ?? '';
               final price = data['price']?.toString() ?? '';
               final nickname = data['userName'] ?? '';
@@ -94,6 +94,7 @@ class MyPostsScreen extends StatelessWidget {
                   price: price,
                   region: region,
                   saleStatus: saleStatus,
+                  condition: condition,
                 ),
               );
             },

@@ -11,6 +11,7 @@ class ProductCard extends StatelessWidget {
   final String price;
   final String region;
   final String saleStatus;
+  final String condition;
   final VoidCallback? onTap;
 
   const ProductCard({
@@ -20,6 +21,7 @@ class ProductCard extends StatelessWidget {
     required this.price,
     required this.region,
     required this.saleStatus,
+    required this.condition,
     this.onTap,
   }) : super(key: key);
 
@@ -65,9 +67,29 @@ class ProductCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                Row(
+                  children: [
+                    if (condition.isNotEmpty)
+                      Container(
+                        margin: EdgeInsets.only(right: 8),
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _getConditionColor(condition),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          condition,
+                          style: TextStyle(color: Colors.white, fontSize: 12),
+                        ),
+                      ),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
                 SizedBox(height: 6),
                 Row(
@@ -128,6 +150,23 @@ class ProductCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Color _getConditionColor(String condition) {
+    switch (condition) {
+      case 'S':
+        return Colors.green;
+      case 'A':
+        return Colors.blue;
+      case 'B':
+        return Colors.orange;
+      case 'C':
+        return Colors.deepOrange;
+      case 'D':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
   }
 }
 
@@ -315,7 +354,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
           final String description = productData['description'] ?? '';
           final String sellerEmail = productData['sellerEmail'] ?? '';
           final String sellerUid = productData['sellerUid'] ?? '';
-          final String displayTitle = condition.isNotEmpty ? '[$condition] $title' : title;
+          final String displayTitle = title;
 
           // region 값은 Firestore의 상품 데이터에 들어있는 region 사용
           final String region = productData['region'] ?? 'Unknown';
@@ -352,7 +391,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   imageUrl: imageUrl,
                   price: price,
                   region: region,
-                  saleStatus: saleStatus
+                  saleStatus: saleStatus,
+                  condition: condition,
                 ),
               ),
               Positioned(
