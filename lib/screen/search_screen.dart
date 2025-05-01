@@ -53,6 +53,15 @@ class _SearchScreenState extends State<SearchScreen> {
 
     await prefs.setStringList('recentSearches_${user.uid}', existing);
 
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('searchHistory')
+        .add({
+          'keyword': query,
+          'searchedAt': Timestamp.now(),
+        });
+
     // Update UI
     setState(() {
       _recentSearches = existing;

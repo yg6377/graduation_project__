@@ -12,6 +12,7 @@ import 'package:graduation_project_1/firestore_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'recommendation_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -90,9 +91,26 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      ProductListScreen(
-        key: ValueKey(_selectedRegion),
-        region: _selectedRegion,
+      FutureBuilder(
+        future: fetchRecommendedProducts(_selectedRegion ?? ''),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('추천 상품 로딩 실패: ${snapshot.error}'));
+          }
+          final recommended = snapshot.data ?? [];
+          for (final doc in recommended) {
+            final data = doc.data() as Map<String, dynamic>;
+            final title = data['title'] ?? '제목 없음';
+            print('✅ 추천 상품: $title');
+          }
+          return ProductListScreen(
+            key: ValueKey(_selectedRegion),
+            region: _selectedRegion,
+          );
+        },
       ),
       ChatListScreen(),
       MyPageScreen(),

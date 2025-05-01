@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'ProductDetailScreen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import 'home_screen.dart'; // 필요 없을 수 있지만, 혹시 모를 참조를 위해 남겨둡니다.
+import 'recommendation_service.dart';
 
 class ProductListScreen extends StatefulWidget {
   final String? region;
@@ -73,6 +73,88 @@ class _ProductListScreenState extends State<ProductListScreen> {
       print('🔥 $region 지역 상품 로딩 중 오류 발생: $e');
       setState(() => _isLoading = false);
     }
+  }
+
+  // 점수 기반 추천 상품을 가져오는 함수 (클릭, 좋아요, 검색 히스토리 기반)
+  Future<List<DocumentSnapshot>> fetchRecommendedProducts() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final currentRegion = widget.region;
+    if (user == null || currentRegion == null) return [];
+
+    final clickedSnap = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('clickedProducts')
+        .get();
+
+    final likedSnap = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('likedProducts')
+        .get();
+
+    final searchSnap = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('searchHistory')
+        .orderBy('searchedAt', descending: true)
+        .limit(5)
+        .get();
+
+    final clickedProductIds = clickedSnap.docs.map((d) => d.id).toSet();
+    final likedProductIds = likedSnap.docs.map((d) => d.id).toSet();
+    final keywords = searchSnap.docs
+        .map((d) => d.data()['keyword']?.toString().toLowerCase())
+        .whereType<String>()
+        .toSet();
+
+    final productsSnap = await FirebaseFirestore.instance
+        .collection('products')
+        .where('region', isEqualTo: currentRegion)
+        .get();
+
+    final scoredProducts = <Map<String, dynamic>>[];
+
+    for (final doc in productsSnap.docs) {
+      final data = doc.data();
+      final productId = doc.id;
+      final title = data['title']?.toString().toLowerCase() ?? '';
+      final description = data['description']?.toString().toLowerCase() ?? '';
+      final sellerUid = data['sellerUid'];
+
+      if (sellerUid == user.uid) continue;
+
+      int score = 0;
+
+      if (clickedProductIds.contains(productId)) score += 2;
+      if (likedProductIds.contains(productId)) score += 5;
+
+      for (final keyword in keywords) {
+        if (title.contains(keyword) || description.contains(keyword)) {
+          score += 3;
+          break;
+        }
+      }
+
+      if (score > 0) {
+        scoredProducts.add({'doc': doc, 'score': score});
+      }
+    }
+
+    scoredProducts.sort((a, b) => b['score'].compareTo(a['score']));
+
+    // Print each recommended product with its actual integer score
+    for (final item in scoredProducts) {
+      final doc = item['doc'] as DocumentSnapshot;
+      final score = item['score'] as int;
+      final title = doc['title'] ?? '제목 없음';
+      print('✅ 추천 상품: $title (점수: $score)');
+    }
+
+    final recommended = scoredProducts.map((e) => e['doc'] as DocumentSnapshot).toList();
+
+    print('📊 점수 기반 추천 상품 ${recommended.length}개 로드 완료');
+    return recommended;
   }
 
   @override
