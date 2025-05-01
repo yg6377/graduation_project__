@@ -49,17 +49,17 @@ class ProductCard extends StatelessWidget {
             borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
             child: imageUrl.isNotEmpty
                 ? Image.network(
-                    imageUrl,
-                    height: 160,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  )
+              imageUrl,
+              height: 160,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            )
                 : Image.asset(
-                    'assets/images/huanhuan_no_image.png',
-                    height: 160,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
+              'assets/images/huanhuan_no_image.png',
+              height: 160,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
           ),
           // 텍스트 내용
           Padding(
@@ -342,19 +342,19 @@ class _ProductListScreenState extends State<ProductListScreen> {
     // Filter recommended products if showOnlyAvailable is true
     final filteredRecommended = showRecommended && widget.showOnlyAvailable
         ? widget.recommendedProducts!.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final saleStatus = data['saleStatus'] ?? '';
-            return saleStatus != 'reserved' && saleStatus != 'soldout';
-          }).toList()
+      final data = doc.data() as Map<String, dynamic>;
+      final saleStatus = data['saleStatus'] ?? '';
+      return saleStatus != 'reserved' && saleStatus != 'soldout';
+    }).toList()
         : widget.recommendedProducts;
 
     // Filter _products if showOnlyAvailable is true
     final filteredProducts = widget.showOnlyAvailable
         ? _products.where((product) {
-            final productData = product.data() as Map<String, dynamic>;
-            final saleStatus = productData['saleStatus'] ?? '';
-            return saleStatus != 'reserved' && saleStatus != 'soldout';
-          }).toList()
+      final productData = product.data() as Map<String, dynamic>;
+      final saleStatus = productData['saleStatus'] ?? '';
+      return saleStatus != 'reserved' && saleStatus != 'soldout';
+    }).toList()
         : _products;
 
     return Scaffold(
