@@ -2,133 +2,117 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:another_flushbar/flushbar.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:graduation_project_1/screen/home_screen.dart';
-import 'package:graduation_project_1/screen/login_screen.dart';
-import 'package:graduation_project_1/screen/notification_center.dart';
-import 'package:graduation_project_1/screen/signup_screen.dart';
-import 'package:graduation_project_1/screen/search_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:another_flushbar/flushbar.dart';
 import 'firebase_options.dart';
+import 'screen/login_screen.dart';
+import 'screen/signup_screen.dart';
+import 'screen/home_screen.dart';
+import 'screen/search_screen.dart';
+import 'screen/notification_center.dart';
 
-// 글로벌 navigatorKey
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+final navigatorKey = GlobalKey<NavigatorState>();
+final FlutterLocalNotificationsPlugin localNotifications = FlutterLocalNotificationsPlugin();
 
-// 로컬 알림 플러그인 인스턴스
-final FlutterLocalNotificationsPlugin fln = FlutterLocalNotificationsPlugin();
-
-// 백그라운드 메시지 핸들러
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage msg) async {
+/// 백그라운드 메시지 핸들러
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  debugPrint('[bg] onBackgroundMessage: data=${msg.data}');
-  _showLocalNotification(msg);
+  _showLocalNotification(message);
 }
 
-// 로컬 알림 표시 함수
-void _showLocalNotification(RemoteMessage msg) {
-  // data-only 메시지라 notification이 null일 수 있으니
-  final title = msg.data['senderName'] ?? '새 메시지';
-  final body  = msg.data['message']    ?? '';
+/// 로컬 알림 표시
+void _showLocalNotification(RemoteMessage message) {
+  final notification = message.notification;
+  final android = message.notification?.android;
 
-  fln.show(
-    msg.hashCode,
-    title,
-    body,
-    NotificationDetails(
-      android: AndroidNotificationDetails(
-        'chat_channel',         // channelId
-        'Chat Notifications',   // channel name
-        importance: Importance.max,
-        priority: Priority.high,
+  if (notification != null && android != null) {
+    localNotifications.show(
+      notification.hashCode,
+      notification.title,
+      notification.body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'chat_channel',
+          'Chat Notifications',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
-
-// FCM 토큰을 Firestore에 저장
+/// 디바이스 토큰 저장
 Future<void> _saveDeviceToken() async {
-  final uid = FirebaseAuth.instance.currentUser?.uid;
-  if (uid == null) return;
+  final user = FirebaseAuth.instance.currentUser;
   final token = await FirebaseMessaging.instance.getToken();
-  if (token == null) return;
-  await FirebaseFirestore.instance
-      .collection('deviceTokens')
-      .doc(uid)
-      .set({'fcmToken': token});
-  debugPrint('✅ FCM token saved for $uid: $token');
+  if (user != null && token != null) {
+    await FirebaseFirestore.instance
+        .collection('deviceTokens')
+        .doc(user.uid)
+        .set({'fcmToken': token});
+  }
 }
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // 로컬 알림 초기화
   const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-  await fln.initialize(
+  await localNotifications.initialize(
     const InitializationSettings(android: androidInit),
-    onDidReceiveNotificationResponse: (NotificationResponse response) async {
-      // 로컬 알림 탭 시 처리 (예: Navigator.pushNamed)
+    onDidReceiveNotificationResponse: (response) {
+      // 알림 클릭 처리
+      debugPrint('🔔 Notification clicked: ${response.payload}');
+      navigatorKey.currentState?.pushNamed('/notification');
     },
   );
 
-  // Notification Channel 생성
+  // Android Notification Channel 생성
   if (Platform.isAndroid) {
     final channel = AndroidNotificationChannel(
       'chat_channel',
       'Chat Notifications',
-      description: '채팅 메시지 알림 채널',
       importance: Importance.high,
+      description: '채팅 알림 채널',
     );
-    await fln
-        .resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
-    debugPrint('✅ Notification channel created: ${channel.id}');
 
-    // ── 강제 알림 테스트 ──
-    /*fln.show(
-      0,
-      '테스트 알림',
-      '로컬 알림 테스트입니다.',
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          channel.id,
-          channel.name,
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-      ),
-    );*/
+    await localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
   }
 
-  // 백그라운드 메시지 등록
+  // Firebase Messaging 설정
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // Android 13+ 권한 요청
+  // 알림 권한 요청
   final settings = await FirebaseMessaging.instance.requestPermission();
-  debugPrint('🔔 Permission: ${settings.authorizationStatus}');
+  if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+    debugPrint('✅ Notification permission granted');
+  } else {
+    debugPrint('⚠️ Notification permission declined');
+  }
 
-  // 로그인 상태 변화 감지해 토큰 저장
+  // 로그인 상태 감지 후 토큰 저장
   FirebaseAuth.instance.authStateChanges().listen((user) {
     if (user != null) {
       _saveDeviceToken();
     }
   });
 
-  // 포그라운드 메시지 수신 처리
-  FirebaseMessaging.onMessage.listen((RemoteMessage msg) {
-    debugPrint('🔥 onMessage payload: notification=${msg.notification}, data=${msg.data}');
-    // 1) 시스템 푸시
-    _showLocalNotification(msg);
-    // 2) 인앱 배너
-    final n = msg.notification;
-    if (n != null && navigatorKey.currentContext != null) {
+  // 포그라운드 메시지 수신
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    debugPrint('🔥 Foreground message received');
+    _showLocalNotification(message);
+
+    final notification = message.notification;
+    if (notification != null && navigatorKey.currentContext != null) {
       Flushbar(
-        title: n.title,
-        message: n.body,
+        title: notification.title,
+        message: notification.body,
         duration: const Duration(seconds: 3),
         flushbarPosition: FlushbarPosition.TOP,
         margin: const EdgeInsets.all(8),
@@ -136,19 +120,6 @@ void main() async {
       ).show(navigatorKey.currentContext!);
     }
   });
-
-  // 백그라운드/종료 상태에서 알림 탭 처리
-  FirebaseMessaging.onMessage.listen((msg) {
-    debugPrint('🥳 onMessage: data=${msg.data}');
-    _showLocalNotification(msg);
-
-    // 2) 인앱 배너만
-    final n = msg.notification;
-    if (n != null && navigatorKey.currentContext != null) {
-    }
-  });
-
-
 
   runApp(const MyApp());
 }
@@ -158,34 +129,22 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData(
-        scaffoldBackgroundColor: Colors.white,
-        appBarTheme: AppBarTheme(
-          backgroundColor: Colors.white,
-          elevation: 1,
-          iconTheme: IconThemeData(color: Colors.blue),
-          titleTextStyle: TextStyle(color: Colors.blue, fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        bottomNavigationBarTheme: BottomNavigationBarThemeData(
-          backgroundColor: Colors.white,
-          selectedItemColor: Colors.blue,
-          unselectedItemColor: Colors.grey,
-        ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: Colors.blue,
-        ),
-      ),
+      title: 'Graduation Project',
       navigatorKey: navigatorKey,
-      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
       initialRoute: '/login',
       routes: {
-        '/login':       (_) => const LoginScreen(),
-        '/signup':      (_) => const SignUpScreen(),
-        '/home':        (_) => const HomeScreen(),
-        '/search':      (_) => const SearchScreen(),
-        '/notification':(_) => const NotificationCenterScreen(),
+        '/login': (_) => const LoginScreen(),
+        '/signup': (_) => const SignUpScreen(),
+        '/home': (_) => const HomeScreen(),
+        '/search': (_) => const SearchScreen(),
+        '/notification': (_) => const NotificationCenterScreen(),
       },
+      debugShowCheckedModeBanner: false,
     );
   }
 }
+
 

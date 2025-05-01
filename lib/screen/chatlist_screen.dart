@@ -131,15 +131,15 @@ class ChatListScreen extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       onTap: () {
+                        final roomData = doc.data()! as Map<String, dynamic>;
+                        final prodId = roomData['productId'] as String? ?? '';
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => ChatRoomScreen(
                               chatRoomId: doc.id,
-                              userName: nickname,
-                              productTitle: '',
-                              productImageUrl: '',
-                              productPrice: '',
+                              userName:   nickname,
+
                             ),
                           ),
                         );
