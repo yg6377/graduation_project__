@@ -168,6 +168,7 @@ class ChatListScreen extends StatelessWidget {
                             builder: (_) => ChatRoomScreen(
                               chatRoomId: doc.id,
                               userName: nick,
+                              saleStatus: data['saleStatus'] as String? ?? 'selling',
                             ),
                           ),
                         );
