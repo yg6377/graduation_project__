@@ -6,141 +6,164 @@ import 'chatroom_screen.dart';
 class ChatListScreen extends StatelessWidget {
   const ChatListScreen({Key? key}) : super(key: key);
 
-  String formatLastTime(Timestamp? timestamp) {
-    if (timestamp == null) return "Just now";
-    final Duration diff = DateTime.now().difference(timestamp.toDate());
-
-    if (diff.inMinutes < 1) return "Just now";
-    if (diff.inHours < 1) return "${diff.inMinutes} minutes ago";
-    if (diff.inHours < 24) return "${diff.inHours} hours ago";
-    return "${diff.inDays} days ago";
-  }
-
-  Future<String> fetchNickname(String uid) async {
-    try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      if (doc.exists && doc.data()!.containsKey('nickname')) {
-        return doc['nickname'];
-      } else {
-        return 'Not registered in database';
-      }
-    } catch (e) {
-      return 'Not registered in database';
-    }
-  }
-
-  Future<void> _confirmAndDelete(BuildContext context, String chatRoomId) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('채팅방 삭제'),
-        content: Text('정말로 이 채팅방을 삭제하시겠습니까?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('취소')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: Text('삭제')),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      await FirebaseFirestore.instance.collection('chatRooms').doc(chatRoomId).delete();
-    }
+  String formatLastTime(Timestamp? ts) {
+    if (ts == null) return "";
+    final diff = DateTime.now().difference(ts.toDate());
+    if (diff.inMinutes < 1) return "방금 전";
+    if (diff.inHours   < 1) return "${diff.inMinutes}분 전";
+    if (diff.inHours   < 24) return "${diff.inHours}시간 전";
+    return "${diff.inDays}일 전";
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    final me = FirebaseAuth.instance.currentUser?.uid ?? "";
 
     return Scaffold(
-      appBar: AppBar(title: Text("Chat List")),
-      body: StreamBuilder(
+      body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('chatRooms').snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+        builder: (ctx, snap) {
+          if (!snap.hasData) return Center(child: CircularProgressIndicator());
 
-          final docs = snapshot.data!.docs;
-          final Map<String, QueryDocumentSnapshot> uniqueChats = {};
+          final docs = snap.data!.docs;
+          final nicknameFutures = <Future<void>>[];
+          final nicknameMap = <String, String>{};
 
           for (var doc in docs) {
-            final data = doc.data() as Map<String, dynamic>;
-            final participants = List<String>.from(data['participants'] ?? []);
-            final otherUid = participants.firstWhere((uid) => uid != currentUid, orElse: () => '');
-            if (otherUid.isNotEmpty && !uniqueChats.containsKey(otherUid)) {
-              uniqueChats[otherUid] = doc;
+            final data = doc.data()! as Map<String, dynamic>;
+            final parts = List<String>.from(data['participants'] ?? []);
+            final other = parts.firstWhere((u) => u != me, orElse: () => "");
+            if (other.isNotEmpty && !nicknameMap.containsKey(other)) {
+              nicknameFutures.add(FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(other)
+                  .get()
+                  .then((userDoc) {
+                nicknameMap[other] = userDoc.exists && userDoc.data()!.containsKey('nickname')
+                    ? userDoc['nickname']
+                    : '알 수 없음';
+              }));
             }
           }
 
-          final filteredDocs = uniqueChats.values.toList();
+          final chats = docs;
+          if (chats.isEmpty) return Center(child: Text('채팅이 없습니다.'));
 
-          if (filteredDocs.isEmpty) return Center(child: Text("No chats available."));
+          return FutureBuilder(
+            future: Future.wait(nicknameFutures),
+            builder: (context, nickSnap) {
+              if (nickSnap.connectionState != ConnectionState.done) {
+                return Center(child: CircularProgressIndicator());
+              }
 
-          return ListView.builder(
-            itemCount: filteredDocs.length,
-            itemBuilder: (context, index) {
-              final doc = filteredDocs[index];
-              final data = doc.data() as Map<String, dynamic>;
-              final participants = List<String>.from(data['participants'] ?? []);
-              final otherUid = participants.firstWhere((uid) => uid != currentUid, orElse: () => '');
+              return ListView.builder(
+                itemCount: chats.length,
+                itemBuilder: (ctx, i) {
+                  final doc = chats[i];
+                  final data = doc.data()! as Map<String, dynamic>;
+                  final parts = List<String>.from(data['participants'] ?? []);
+                  final otherUid = parts.firstWhere((u) => u != me, orElse: () => "");
+                  final leavers = List<String>.from(data['leavers'] ?? []);
+                  final lastMsg = (!leavers.contains(me) && leavers.contains(otherUid))
+                      ? "상대방이 대화를 떠났습니다."
+                      : data['lastMessage'] as String? ?? "";
+                  final lastTime = formatLastTime(data['lastTime'] as Timestamp?);
 
-              return FutureBuilder<String>(
-                future: fetchNickname(otherUid),
-                builder: (context, snapshot) {
-                  final nickname = snapshot.data ?? 'Loading...';
-                  final location = data['location'] ?? 'No location info';
-                  final lastMessage = data['lastMessage'] ?? '';
-                  final lastTime = data['lastTime'] as Timestamp?;
-                  final profileImageUrl = data['profileImageUrl'] ?? '';
-                  final timeString = formatLastTime(lastTime);
+                  final raw = data['unreadCounts'] as Map<dynamic, dynamic>? ?? {};
+                  final counts = Map<String, dynamic>.from(raw);
+                  final unread = counts[me] as int? ?? 0;
+
+                  final profileUrl = data['profileImageUrl'] as String? ?? "";
+                  final nick = nicknameMap[otherUid] ?? "알 수 없음";
 
                   return Dismissible(
                     key: ValueKey(doc.id),
                     direction: DismissDirection.endToStart,
-                    confirmDismiss: (_) async {
-                      await _confirmAndDelete(context, doc.id);
-                      return false;
+                    onDismissed: (_) async {
+                      final chatRoomRef = FirebaseFirestore.instance.collection('chatRooms').doc(doc.id);
+                      final data = doc.data()! as Map<String, dynamic>;
+                      final participants = List<String>.from(data['participants'] ?? []);
+                      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+
+                      if (currentUid == null) return;
+
+                      // 1. leavers 필드에 현재 유저 추가
+                      await chatRoomRef.update({
+                        'leavers': FieldValue.arrayUnion([currentUid])
+                      });
+
+                      // 2. 상대방도 나간 경우 전체 삭제
+                      final updatedDoc = await chatRoomRef.get();
+                      final updatedData = updatedDoc.data() as Map<String, dynamic>;
+                      final leavers = List<String>.from(updatedData['leavers'] ?? []);
+
+                      final allLeft = participants.every((uid) => leavers.contains(uid));
+
+                      if (allLeft) {
+                        final messages = await chatRoomRef.collection('message').get();
+                        for (final message in messages.docs) {
+                          await message.reference.delete();
+                        }
+                        await chatRoomRef.delete();
+                      }
                     },
-                    background: Container(
-                      color: Colors.red,
-                      alignment: Alignment.centerRight,
-                      padding: EdgeInsets.symmetric(horizontal: 20),
-                      child: Icon(Icons.delete, color: Colors.white),
-                    ),
+                    background: Container(color: Colors.red),
                     child: ListTile(
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       leading: CircleAvatar(
-                        backgroundImage: profileImageUrl.isNotEmpty
-                            ? NetworkImage(profileImageUrl)
-                            : AssetImage('assets/default_profile.png') as ImageProvider,
-                        radius: 25,
+                        radius: 24,
+                        backgroundImage: profileUrl.isNotEmpty
+                            ? NetworkImage(profileUrl)
+                            : AssetImage('assets/images/default_profile.png')
+                        as ImageProvider,
                       ),
                       title: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            '$nickname ($location)',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            nick,
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                           ),
                           Text(
-                            timeString,
+                            lastTime,
                             style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                         ],
                       ),
-                      subtitle: Text(
-                        lastMessage,
-                        style: TextStyle(fontSize: 13, color: Colors.black),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      subtitle: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              lastMsg,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (unread > 0)
+                            Container(
+                              width: 20,
+                              height: 20,
+                              margin: EdgeInsets.only(left: 8, top: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                '$unread',
+                                style: TextStyle(color: Colors.white, fontSize: 12),
+                              ),
+                            ),
+                        ],
                       ),
                       onTap: () {
+                        print('이 채팅방의 uid는 ${doc.id} 입니다.');
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => ChatRoomScreen(
                               chatRoomId: doc.id,
-                              userName: nickname,
-                              productTitle: '',
-                              productImageUrl: '',
-                              productPrice: '',
+                              userName: nick,
                             ),
                           ),
                         );

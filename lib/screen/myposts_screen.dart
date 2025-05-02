@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:graduation_project_1/screen/productlist_screen.dart';
 import 'ProductDetailScreen.dart'; // Replace with your actual import path
 
 class MyPostsScreen extends StatelessWidget {
@@ -38,35 +39,62 @@ class MyPostsScreen extends StatelessWidget {
             itemCount: posts.length,
             itemBuilder: (context, index) {
               final data = posts[index].data() as Map<String, dynamic>;
-              return Card(
-                margin: EdgeInsets.all(8),
-                child: ListTile(
-                  title: Text(data['title'] ?? ''),
-                  subtitle: Text(data['price'] ?? ''),
-                  leading: data['imageUrl'] != null && data['imageUrl'].isNotEmpty
-                      ? Image.network(data['imageUrl'], width: 60, height: 60, fit: BoxFit.cover)
-                      : Icon(Icons.image, size: 60),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ProductDetailScreen(
-                          productId: posts[index].id,
-                          title: data['title'] ?? '',
-                          price: data['price'] ?? '',
-                          description: data['description'] ?? '',
-                          imageUrl: data['imageUrl'] ?? '',
-                          timestamp: data['timestamp']?.toDate().toString() ?? '',
-                          sellerUid: data['sellerUid'] ?? 'unknown',
-                          sellerEmail: data['sellerUid'] ?? '',
-                          chatRoomId: '', userName: '',
-                          productTitle: '',
-                          productImageUrl: '',
-                          productPrice: '',
-                        ),
+              final condition = data['condition'] ?? '';
+              final title = data['title'] ?? '';
+              final displayTitle = title;
+              final imageUrl = data['imageUrl'] ?? '';
+              final price = data['price']?.toString() ?? '';
+              final nickname = data['userName'] ?? '';
+              final region = data['region'] ?? '';
+              final saleStatus = data['saleStatus'] ?? '';
+              final timestamp = data['timestamp']?.toDate();
+
+              String formattedTime = 'Unknown';
+              if (timestamp != null) {
+                final difference = DateTime.now().difference(timestamp);
+                if (difference.inDays > 7) {
+                  formattedTime = '${timestamp.month}/${timestamp.day}/${timestamp.year}';
+                } else if (difference.inDays >= 1) {
+                  formattedTime = '${difference.inDays}days before';
+                } else if (difference.inHours >= 1) {
+                  formattedTime = '${difference.inHours}hours before';
+                } else if (difference.inMinutes >= 1) {
+                  formattedTime = '${difference.inMinutes}minutes before';
+                } else {
+                  formattedTime = 'a moment ago';
+                }
+              }
+
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProductDetailScreen(
+                        productId: posts[index].id,
+                        title: displayTitle,
+                        price: price,
+                        description: data['description'] ?? '',
+                        imageUrl: imageUrl,
+                        timestamp: formattedTime,
+                        sellerUid: data['sellerUid'] ?? '',
+                        sellerEmail: data['sellerUid'] ?? '',
+                        chatRoomId: '',
+                        userName: nickname,
+                        productTitle: title,
+                        productImageUrl: imageUrl,
+                        productPrice: price,
                       ),
-                    );
-                  },
+                    ),
+                  );
+                },
+                child: ProductCard(
+                  title: displayTitle,
+                  imageUrl: imageUrl,
+                  price: price,
+                  region: region,
+                  saleStatus: saleStatus,
+                  condition: condition,
                 ),
               );
             },

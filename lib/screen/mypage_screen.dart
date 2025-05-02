@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:graduation_project_1/screen/edit_profile_screen.dart';
@@ -52,6 +53,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xFFF4F9FF),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,78 +62,117 @@ class _MyPageScreenState extends State<MyPageScreen> {
             // 프로필 섹션
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  // 프로필 이미지
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundImage: _currentUser?.photoURL != null
-                        ? NetworkImage(_currentUser!.photoURL!)
-                        : NetworkImage('https://via.placeholder.com/150'),
+              child: Card(
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: Colors.grey.shade300, width: 1),
+                ),
+                elevation: 0,
+                shadowColor: Colors.transparent,
+                child: Container(
+                  decoration: BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFFB6DBF8).withOpacity(0.5),
+                        blurRadius: 8,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.white,
                   ),
-                  SizedBox(width: 16),
-                  // 닉네임 수정
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
                       children: [
-                        Text(
-                          _currentUser?.displayName ?? 'No nickname',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                        // 프로필 이미지
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundImage: _currentUser?.photoURL != null
+                              ? NetworkImage(_currentUser!.photoURL!)
+                              : AssetImage('assets/images/default_profile.png') as ImageProvider,
                         ),
-                        SizedBox(height: 5),
-                        FutureBuilder<DocumentSnapshot>(
-                          future: FirebaseFirestore.instance.collection('users').doc(_currentUser?.uid).get(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
-                              return Text("Your Location: ...", style: TextStyle(fontSize: 14, color: Colors.grey));
-                            }
-                            if (snapshot.hasData && snapshot.data!.exists) {
-                              final region = snapshot.data!.get('region');
-                              return Text("Your Location: $region", style: TextStyle(fontSize: 14, color: Colors.grey));
-                            }
-                            return Text("Your Location: Unknown", style: TextStyle(fontSize: 14, color: Colors.grey));
-                          },
-                        ),
-                        SizedBox(height: 15),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () async {
-                                  final result = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => EditProfileScreen()),
-                                  );
-                                  if (result == true) {
-                                    setState(() {
-                                      _nicknameController.text = FirebaseAuth.instance.currentUser?.displayName ?? '';
-                                    });
-                                  }
-                                },
-                                child: Text('Edit Profile'),
-                              ),
-                            ),
-                            SizedBox(width: 10),
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () async {
-                                  await FirebaseAuth.instance.signOut();
-                                  if (!mounted) return;
-                                  Navigator.of(context).pushReplacementNamed('/login');
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
+                        SizedBox(width: 16),
+                        // 닉네임 수정
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _currentUser?.displayName ?? 'No nickname',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.blueGrey[900],
+                                  fontFamily: CupertinoTheme.of(context).textTheme.textStyle.fontFamily,
                                 ),
-                                child: Text('Logout'),
                               ),
-                            ),
-                          ],
+                              SizedBox(height: 6),
+                              FutureBuilder<DocumentSnapshot>(
+                                future: FirebaseFirestore.instance.collection('users').doc(_currentUser?.uid).get(),
+                                builder: (context, snapshot) {
+                                  if (snapshot.connectionState == ConnectionState.waiting) {
+                                    return Text("Your Location: ...", style: TextStyle(fontSize: 14, color: Colors.blueGrey));
+                                  }
+                                  if (snapshot.hasData && snapshot.data!.exists) {
+                                    final region = snapshot.data!.get('region');
+                                    return Text("Your Location: $region", style: TextStyle(fontSize: 14, color: Colors.blueGrey));
+                                  }
+                                  return Text("Your Location: Unknown", style: TextStyle(fontSize: 14, color: Colors.blueGrey));
+                                },
+                              ),
+                              SizedBox(height: 18),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: CupertinoButton(
+                                      padding: EdgeInsets.symmetric(vertical: 12),
+                                      color: Color(0xFF3B82F6),
+                                      borderRadius: BorderRadius.circular(8),
+                                      onPressed: () async {
+                                        final result = await Navigator.push(
+                                          context,
+                                          MaterialPageRoute(builder: (context) => EditProfileScreen()),
+                                        );
+                                        if (result == true) {
+                                          setState(() {
+                                            _nicknameController.text = FirebaseAuth.instance.currentUser?.displayName ?? '';
+                                          });
+                                        }
+                                      },
+                                      child: Text(
+                                        'Edit Profile',
+                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontFamily: CupertinoTheme.of(context).textTheme.textStyle.fontFamily),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: CupertinoButton(
+                                      padding: EdgeInsets.symmetric(vertical: 12),
+                                      color: Color(0xFF3B82F6),
+                                      borderRadius: BorderRadius.circular(8),
+                                      onPressed: () async {
+                                        await FirebaseAuth.instance.signOut();
+                                        if (!mounted) return;
+                                        Navigator.of(context).pushReplacementNamed('/login');
+                                      },
+                                      child: Text(
+                                        'Logout',
+                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontFamily: CupertinoTheme.of(context).textTheme.textStyle.fontFamily),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
-                ],
+                ),
               ),
             ),
             SizedBox(height: 30),
@@ -144,7 +185,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
                 children: [
                   Text(
                     "My Transactions",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: Colors.blueGrey[900], fontFamily: CupertinoTheme.of(context).textTheme.textStyle.fontFamily),
                   ),
                   SizedBox(height: 8),
                   GestureDetector(
@@ -155,16 +196,38 @@ class _MyPageScreenState extends State<MyPageScreen> {
                       );
                     },
                     child: Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                        child: Row(
-                          children: [
-                            Icon(Icons.list_alt, size: 28, color: Colors.blue),
-                            SizedBox(width: 12),
-                            Text("My Posts", style: TextStyle(fontSize: 16)),
+                      color: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: Color(0xFFB6DBF8), width: 1),
+                      ),
+                      shadowColor: Colors.transparent,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Color(0xFFB6DBF8), width: 1),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0xFFB6DBF8).withOpacity(0.3),
+                              blurRadius: 6,
+                              offset: Offset(0, 3),
+                            ),
                           ],
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                          child: Row(
+                            children: [
+                              Icon(Icons.list_alt, size: 28, color: Color(0xFF60A5FA)),
+                              SizedBox(width: 12),
+                              Text(
+                                "My Posts",
+                                style: TextStyle(fontSize: 16, color: Colors.blueGrey[800], fontFamily: CupertinoTheme.of(context).textTheme.textStyle.fontFamily),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -177,16 +240,38 @@ class _MyPageScreenState extends State<MyPageScreen> {
                       );
                     },
                     child: Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                        child: Row(
-                          children: [
-                            Icon(Icons.favorite, size: 28, color: Colors.red),
-                            SizedBox(width: 12),
-                            Text("Favorite List", style: TextStyle(fontSize: 16)),
+                      color: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: Color(0xFFB6DBF8), width: 1),
+                      ),
+                      shadowColor: Colors.transparent,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Color(0xFFB6DBF8), width: 1),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0xFFB6DBF8).withOpacity(0.3),
+                              blurRadius: 6,
+                              offset: Offset(0, 3),
+                            ),
                           ],
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                          child: Row(
+                            children: [
+                              Icon(Icons.favorite, size: 28, color: Color(0xFF60A5FA)),
+                              SizedBox(width: 12),
+                              Text(
+                                "Favorite List",
+                                style: TextStyle(fontSize: 16, color: Colors.blueGrey[800], fontFamily: CupertinoTheme.of(context).textTheme.textStyle.fontFamily),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -195,6 +280,76 @@ class _MyPageScreenState extends State<MyPageScreen> {
               ),
             ),
             SizedBox(height: 20),
+            Divider(thickness: 2),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Received Review",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.blueGrey[900],
+                      fontFamily: CupertinoTheme.of(context).textTheme.textStyle.fontFamily,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(_currentUser?.uid)
+                        .collection('review')
+                        .orderBy('timestamp', descending: true)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Center(child: CircularProgressIndicator());
+                      }
+                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                        return Text("No reviews yet.", style: TextStyle(color: Colors.grey));
+                      }
+                      return Column(
+                        children: snapshot.data!.docs.map((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          return Card(
+                            margin: EdgeInsets.symmetric(vertical: 6),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 2,
+                            child: ListTile(
+                              title: Text(
+                                data['fromNickname'] ?? 'Unknown',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(height: 4),
+                                  Text(data['comment'] ?? ''),
+                                  SizedBox(height: 4),
+                                  Row(
+                                    children: List.generate(5, (index) {
+                                      return Icon(
+                                        index < (data['rating'] ?? 0)
+                                            ? Icons.star
+                                            : Icons.star_border,
+                                        color: Colors.amber,
+                                        size: 20,
+                                      );
+                                    }),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

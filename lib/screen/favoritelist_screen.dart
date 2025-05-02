@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:graduation_project_1/screen/productlist_screen.dart';
 import 'ProductDetailScreen.dart'; // Adjust the import path as needed
 
 class FavoriteListScreen extends StatelessWidget {
@@ -10,31 +11,27 @@ class FavoriteListScreen extends StatelessWidget {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return [];
 
-    final likedProductIds = <String>[];
-
-    final likesSnapshot = await FirebaseFirestore.instance
-        .collectionGroup('likes')
-        .where('uid', isEqualTo: currentUser.uid)
+    // Get liked product IDs
+    final likedRefs = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('likedProducts')
         .get();
 
-    for (var likeDoc in likesSnapshot.docs) {
-      final productRef = likeDoc.reference.parent.parent;
-      if (productRef != null) {
-        likedProductIds.add(productRef.id);
-      }
-    }
+    // Fetch each product document
+    final futures = likedRefs.docs.map((doc) async {
+      final productDoc = await FirebaseFirestore.instance
+          .collection('products')
+          .doc(doc.id)
+          .get();
+      return productDoc.exists ? productDoc : null;
+    }).toList();
 
-    final productSnapshots = await Future.wait(
-      likedProductIds.map((productId) async {
-        final productDoc = await FirebaseFirestore.instance
-            .collection('products')
-            .doc(productId)
-            .get();
-        return productDoc.exists ? productDoc : null;
-      }).where((e) => e != null),
-    );
+    // Await all fetches
+    final results = await Future.wait(futures);
 
-    return productSnapshots.cast<DocumentSnapshot>();
+    // Filter out any nulls and cast to DocumentSnapshot
+    return results.whereType<DocumentSnapshot>().toList();
   }
 
   @override
@@ -65,31 +62,38 @@ class FavoriteListScreen extends StatelessWidget {
             itemCount: products.length,
             itemBuilder: (context, index) {
               final data = products[index].data() as Map<String, dynamic>;
+              final condition = data['condition'] ?? '';
+              final title = data['title'] ?? '';
+              final displayTitle = title;
+              final saleStatus = data['saleStatus'] ?? '';
+              final region = data['region'] ?? '';
               return Card(
                 margin: EdgeInsets.all(8),
-                child: ListTile(
-                  title: Text(data['title'] ?? ''),
-                  subtitle: Text((data['price'] ?? '').toString()),
-                  leading: data['imageUrl'] != null && data['imageUrl'].isNotEmpty
-                      ? Image.network(data['imageUrl'], width: 60, height: 60, fit: BoxFit.cover)
-                      : Icon(Icons.image, size: 60),
+                child: ProductCard(
+                  title: displayTitle,
+                  imageUrl: data['imageUrl'] ?? '',
+                  price: (data['price'] ?? '').toString(),
+                  region: region,
+                  saleStatus: saleStatus,
+                  condition: condition,
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => ProductDetailScreen(
                               productId: products[index].id,
-                          title: data['title'] ?? '',
+                          title: displayTitle,
                           price: (data['price'] ?? '').toString(),
                           description: data['description'] ?? '',
                           imageUrl: data['imageUrl'] ?? '',
                           timestamp: data['timestamp']?.toDate().toString() ?? '',
                           sellerUid: data['sellerUid'] ?? 'unknown',
                           sellerEmail: data['sellerUid'] ?? '',
-                          chatRoomId: '', userName: '',
-                          productTitle: '',
-                          productImageUrl: '',
-                          productPrice: '',
+                          chatRoomId: '',
+                          userName: '',
+                          productTitle: title,
+                          productImageUrl: data['imageUrl'] ?? '',
+                          productPrice: (data['price'] ?? '').toString(),
                         ),
                       ),
                     );

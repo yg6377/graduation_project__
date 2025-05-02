@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // 추가된 import
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key}); //2
@@ -40,42 +41,91 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Login')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(labelText: 'Email'),
-            ),
-            TextField(
-              controller: _passwordController,
-              decoration: InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: login,
-              child: Text('Login'),
-            ),
+    return CupertinoPageScaffold(
+      navigationBar: const CupertinoNavigationBar(
+        middle: Text('Login'),
+        backgroundColor: Color(0xFFEAF6FF),
+        border: null,
+      ),
+      child: Container(
 
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/signup');
-              },
-              child: Text('Sign Up'),
-            ),
+        color: const Color(0xFFEAF6FF),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
 
-            const SizedBox(height: 10), // 버튼 간격 추가
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
 
-            ElevatedButton(
-              onPressed: autoLogin,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
-              child: const Text('Auto Login(임시)', style: TextStyle(color: Colors.white)),
+                Expanded(
+
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Image.asset(
+                        'assets/images/huanhuan_welcome.png',
+                        height: 300,
+                      ),
+                      CupertinoTextField(
+                        controller: _emailController,
+                        placeholder: 'Email',
+                        placeholderStyle: TextStyle(color: CupertinoColors.activeBlue),
+                        keyboardType: TextInputType.emailAddress,
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      ),
+                      const SizedBox(height: 18),
+                      CupertinoTextField(
+                        controller: _passwordController,
+                        placeholder: 'Password',
+                        placeholderStyle: TextStyle(color: CupertinoColors.activeBlue),
+                        obscureText: true,
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      ),
+                      const SizedBox(height: 28),
+                      CupertinoTheme(
+                        data: CupertinoTheme.of(context).copyWith(
+                          primaryColor: const Color(0xFF0078B8), // Blue Bottle blue
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            CupertinoButton.filled(
+                              onPressed: login,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              child: const Text('Login'),
+                            ),
+                            const SizedBox(height: 14),
+                            CupertinoButton.filled(
+                              onPressed: autoLogin,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              child: const Text('Auto Login'),
+                            ),
+                            const SizedBox(height: 28),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
+                  ),
+                ),
+                CupertinoButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/signup');
+                  },
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: const Text(
+                    'Is this your first time using the app?',
+                    style: TextStyle(
+                      color: Color(0xFF0078B8),
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

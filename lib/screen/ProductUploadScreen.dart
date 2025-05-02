@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/services.dart'; // 숫자 입력 제한
+import 'package:flutter/services.dart'; // Number input restriction
 
 class ProductUploadScreen extends StatefulWidget {
   @override
@@ -19,7 +19,9 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
   File? _image;
   final ImagePicker _picker = ImagePicker();
 
-  /// 이미지 선택 함수
+  String selectedCondition = 'S'; // Default value: Unopened
+
+  /// Image selection function
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
@@ -29,18 +31,19 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
     }
   }
 
-  /// 상품 업로드 함수 (Firestore에 productId 필드 추가)
+  /// Product upload function (Add productId field to Firestore)
   Future<void> _uploadProduct() async {
     try {
-      // 제목, 가격, 설명 기본값 처리
-      final user = FirebaseAuth.instance.currentUser; //판매자 이메일 저장
-      String? uploaderUid = user?.uid; //판매자 이메일 저장
+      // Handle default values for title, price, description
+      final user = FirebaseAuth.instance.currentUser; // Save seller UID
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user?.uid).get();
+      final String region = (userDoc.data()?['region'] ?? 'Unknown').toString().trim();
 
       String title = titleController.text.isEmpty ? "No title" : titleController.text;
       String price = priceController.text.isEmpty ? "Price unknown" : "${priceController.text} ";
       String description = descriptionController.text.isEmpty ? "No description" : descriptionController.text;
 
-      // 이미지 업로드
+      // Upload image
       String imageUrl = "";
       if (_image != null) {
         String fileName = DateTime.now().millisecondsSinceEpoch.toString();
@@ -50,27 +53,48 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
         imageUrl = await snapshot.ref.getDownloadURL();
       }
 
-      // Firestore에 새 문서 생성
+      // Create new document in Firestore
       final docRef = await FirebaseFirestore.instance.collection('products').add({
         'title': title,
         'price': price,
         'description': description,
         'imageUrl': imageUrl,
-        'likes': 0, // 좋아요 초기값
+        'likes': 0, // Initial likes value
         'timestamp': FieldValue.serverTimestamp(),
 
-        'sellerUid': FirebaseAuth.instance.currentUser!.uid,
-        //'sellerEmail': uploaderEmail, //판매자 이메일 저장
-        'sellerUid': FirebaseAuth.instance.currentUser!.uid,
-
+        'sellerUid': user?.uid,
+        //'sellerEmail': uploaderEmail, // Save seller UID
+        'condition': selectedCondition,
+        'region': region, // newly added
+        'saleStatus': 'selling', // Added: default to "selling"
       });
 
-      // 문서 ID를 'productId' 필드로 업데이트 (firestore 문서ID저장)
+      // Update document ID as 'productId' field (Store Firestore document ID)
       await docRef.update({
         'productId': docRef.id,
       });
 
-      // 업로드 완료 후 이전 화면으로 이동
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user!.uid)
+          .collection('clickedProducts')
+          .doc(docRef.id)
+          .set({
+        'productId': docRef.id,
+        'clickedAt': null,
+      });
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('likedProducts')
+          .doc(docRef.id)
+          .set({
+        'productId': docRef.id,
+        'likedAt': null,
+      });
+
+      // Navigate back after upload
       Navigator.pop(context);
 
     } catch (e) {
@@ -81,7 +105,7 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Product Upload')),
+      appBar: AppBar(title: Text('Upload Product')),
       body: Padding(
         padding: EdgeInsets.all(16.0),
         child: SingleChildScrollView(
@@ -108,13 +132,29 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
               ),
               TextField(
                 controller: priceController,
-                decoration: InputDecoration(labelText: 'Price (Numbers only)'),
+                decoration: InputDecoration(labelText: 'Price (Numbers Only)'),
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               ),
               TextField(
                 controller: descriptionController,
                 decoration: InputDecoration(labelText: 'Description'),
+              ),
+              DropdownButtonFormField<String>(
+                value: selectedCondition,
+                decoration: InputDecoration(labelText: 'Condition'),
+                items: [
+                  DropdownMenuItem(value: 'S', child: Text('S (Unopened)')),
+                  DropdownMenuItem(value: 'A', child: Text('A (Almost New)')),
+                  DropdownMenuItem(value: 'B', child: Text('B (Slightly Used)')),
+                  DropdownMenuItem(value: 'C', child: Text('C (Heavily Used)')),
+                  DropdownMenuItem(value: 'D', child: Text('D (Broken or Defective)')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    selectedCondition = value!;
+                  });
+                },
               ),
               SizedBox(height: 20),
               ElevatedButton(

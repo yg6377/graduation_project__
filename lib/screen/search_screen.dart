@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:graduation_project_1/screen/productlist_screen.dart';
+import 'package:graduation_project_1/screen/productlist_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'ProductDetailScreen.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -13,12 +16,56 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   TextEditingController _searchController = TextEditingController();
   List<String> _recentSearches = []; // 🔹 Initially empty list
+  bool _isLoading = true;
 
-  void _addRecentSearch(String query) {
+  @override
+  void initState() {
+    super.initState();
+    _loadRecentSearches();
+  }
+
+  Future<void> _loadRecentSearches() async {
+    final user = FirebaseAuth.instance.currentUser;
+    SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
-      if (!_recentSearches.contains(query)) {
-        _recentSearches.insert(0, query);
-      }
+      _recentSearches = prefs.getStringList('recentSearches_${user!.uid}') ?? [];
+      _isLoading = false;
+    });
+  }
+
+  void _addRecentSearch(String query) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final lowerQuery = query.toLowerCase();
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> existing = prefs.getStringList('recentSearches_${user.uid}') ?? [];
+
+    // Remove case-insensitive duplicates
+    existing.removeWhere((q) => q.toLowerCase() == lowerQuery);
+
+    // Insert at front
+    existing.insert(0, query);
+
+    // Limit to max 10
+    if (existing.length > 10) {
+      existing = existing.sublist(0, 10);
+    }
+
+    await prefs.setStringList('recentSearches_${user.uid}', existing);
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('searchHistory')
+        .add({
+          'keyword': query,
+          'searchedAt': Timestamp.now(),
+        });
+
+    // Update UI
+    setState(() {
+      _recentSearches = existing;
     });
   }
 
@@ -49,6 +96,7 @@ class _SearchScreenState extends State<SearchScreen> {
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(60.0), // Adjust search bar height
         child: AppBar(
+          backgroundColor: Color(0xFFEAF6FF),
           automaticallyImplyLeading: false, // Remove default back button
           leading: IconButton(
             icon: Icon(Icons.arrow_back),
@@ -73,44 +121,52 @@ class _SearchScreenState extends State<SearchScreen> {
           ],
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Recent Searches', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            SizedBox(height: 8),
-            Expanded(
-              child: _recentSearches.isEmpty
-                  ? Center(
-                child: Text(
-                  'No recent searches.',
-                  style: TextStyle(fontSize: 14, color: Colors.grey),
-                ),
-              )
-                  : ListView.builder(
-                itemCount: _recentSearches.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(_recentSearches[index]),
-                    trailing: IconButton(
-                      icon: Icon(Icons.close),
-                      onPressed: () {
-                        setState(() {
-                          _recentSearches.removeAt(index);
-                        });
-                      },
+      body: Container(
+        color: Color(0xFFEAF6FF),
+        child: _isLoading
+            ? Center(child: CircularProgressIndicator())
+            : Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Recent Searches', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 8),
+                    Expanded(
+                      child: _recentSearches.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No recent searches.',
+                                style: TextStyle(fontSize: 14, color: Colors.grey),
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: _recentSearches.length,
+                              itemBuilder: (context, index) {
+                                return ListTile(
+                                  title: Text(_recentSearches[index]),
+                                  trailing: IconButton(
+                                    icon: Icon(Icons.close),
+                                    onPressed: () async {
+                                      setState(() {
+                                        _recentSearches.removeAt(index);
+                                      });
+                                      final user = FirebaseAuth.instance.currentUser;
+                                      SharedPreferences prefs = await SharedPreferences.getInstance();
+                                      prefs.setStringList('recentSearches_${user!.uid}', _recentSearches);
+                                    },
+                                  ),
+                                  onTap: () {
+                                    _searchController.text = _recentSearches[index];
+                                    _search();
+                                  },
+                                );
+                              },
+                            ),
                     ),
-                    onTap: () {
-                      _searchController.text = _recentSearches[index];
-                      _search(); // Execute search with selected keyword
-                    },
-                  );
-                },
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -124,42 +180,50 @@ class SearchResultScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Results')),
-      body: ListView.builder(
-        itemCount: results.length,
-        itemBuilder: (context, index) {
-          final product = results[index];
-          final productData = product.data() as Map<String, dynamic>;
+      appBar: AppBar(
+        title: Text('Results'),
+        backgroundColor: Color(0xFFEAF6FF),
+      ),
+      body: Container(
+        color: Color(0xFFEAF6FF),
+        child: ListView.builder(
+          itemCount: results.length,
+          itemBuilder: (context, index) {
+            final product = results[index];
+            final productData = product.data() as Map<String, dynamic>;
 
-          final timestampValue = productData['timestamp'];
-          final String timestampString = (timestampValue is Timestamp)
-              ? timestampValue.toDate().toString()
-              : '';
+            final String title = productData['title'] ?? '';
+            final String imageUrl = (productData['imageUrl'] ?? '').toString();
+            final String price = productData['price']?.toString() ?? '';
+            final String region = productData['region'] ?? '';
+            final String saleStatus = productData['saleStatus'] ?? '';
 
-          final String productId = productData['productId'] ?? product.id;
-          final String title = productData['title'] ?? '';
-          final String price = productData['price']?.toString() ?? '';
-          final String imageUrl = productData['imageUrl'] ?? '';
-          final String description = productData['description'] ?? '';
-          final String sellerEmail = productData['sellerEmail'] ?? '';
+            return ProductCard(
+              title: title,
+              imageUrl: imageUrl,
+              price: price,
+              region: region,
+              saleStatus: saleStatus,
+              onTap: () {
+                final timestampValue = productData['timestamp'];
+                final String timestampString = (timestampValue is Timestamp)
+                    ? timestampValue.toDate().toString()
+                    : '';
 
-          return Card(
-            margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: ListTile(
-                leading: SizedBox(
-                  width: 80,
-                  height: 80,
-                  child: Center(
-                    child: imageUrl.isNotEmpty
-                        ? Image.network(imageUrl, fit: BoxFit.cover)
-                        : Image.asset('assets/images/no_image_pig.png', fit: BoxFit.cover),
-                  ),
-                ),
-                title: Text(title, style: TextStyle(fontSize: 18)),
-                subtitle: Text(price, style: TextStyle(fontSize: 16)),
-                onTap: () {
+                final String productId = productData['productId'] ?? product.id;
+                final String description = productData['description'] ?? '';
+                final String sellerEmail = productData['sellerEmail'] ?? '';
+                final String condition = productData['condition'] ?? '';
+                final String sellerUid = productData['sellerUid'] ?? '';
+
+                print('🟢 Product clicked: $title / $productId / $sellerUid');
+
+                if (productId.isEmpty || title.isEmpty || sellerUid.isEmpty) {
+                  print('⚠️ 필수 데이터 누락. 이동 중단.');
+                  return;
+                }
+
+                try {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -171,21 +235,22 @@ class SearchResultScreen extends StatelessWidget {
                         imageUrl: imageUrl,
                         timestamp: timestampString,
                         sellerEmail: sellerEmail,
-                        chatRoomId: '',                // 필수니까 빈값으로라도 채움
-                        userName: sellerEmail,                  // 추후 로그인 유저로 넘겨도 됨
-                        sellerUid: product['sellerUid'],
+                        chatRoomId: '',
+                        userName: sellerEmail,
+                        sellerUid: sellerUid,
                         productTitle: title,
                         productImageUrl: imageUrl,
                         productPrice: price,
-
                       ),
                     ),
                   );
-                },
-              ),
-            ),
-          );
-        },
+                } catch (e) {
+                  print('❌ Navigator.push failed: $e');
+                }
+              }, condition: '',
+            );
+          },
+        ),
       ),
     );
   }
