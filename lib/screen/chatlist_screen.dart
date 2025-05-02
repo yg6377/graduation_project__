@@ -9,10 +9,10 @@ class ChatListScreen extends StatelessWidget {
   String formatLastTime(Timestamp? ts) {
     if (ts == null) return "";
     final diff = DateTime.now().difference(ts.toDate());
-    if (diff.inMinutes < 1) return "방금 전";
-    if (diff.inHours   < 1) return "${diff.inMinutes}분 전";
-    if (diff.inHours   < 24) return "${diff.inHours}시간 전";
-    return "${diff.inDays}일 전";
+    if (diff.inMinutes < 1) return "just now";
+    if (diff.inHours   < 1) return "${diff.inMinutes}min ago";
+    if (diff.inHours   < 24) return "${diff.inHours}hr ago";
+    return "${diff.inDays}days ago";
   }
 
   @override
@@ -41,13 +41,17 @@ class ChatListScreen extends StatelessWidget {
                   .then((userDoc) {
                 nicknameMap[other] = userDoc.exists && userDoc.data()!.containsKey('nickname')
                     ? userDoc['nickname']
-                    : '알 수 없음';
+                    : 'Unknown';
               }));
             }
           }
 
-          final chats = docs;
-          if (chats.isEmpty) return Center(child: Text('채팅이 없습니다.'));
+          final chats = docs.where((doc) {
+            final data = doc.data()! as Map<String, dynamic>;
+            final leavers = List<String>.from(data['leavers'] ?? []);
+            return !leavers.contains(me);
+          }).toList();
+          if (chats.isEmpty) return Center(child: Text('No chats available.'));
 
           return FutureBuilder(
             future: Future.wait(nicknameFutures),
@@ -65,7 +69,7 @@ class ChatListScreen extends StatelessWidget {
                   final otherUid = parts.firstWhere((u) => u != me, orElse: () => "");
                   final leavers = List<String>.from(data['leavers'] ?? []);
                   final lastMsg = (!leavers.contains(me) && leavers.contains(otherUid))
-                      ? "상대방이 대화를 떠났습니다."
+                      ? "The other user has left the chat."
                       : data['lastMessage'] as String? ?? "";
                   final lastTime = formatLastTime(data['lastTime'] as Timestamp?);
 
@@ -74,7 +78,7 @@ class ChatListScreen extends StatelessWidget {
                   final unread = counts[me] as int? ?? 0;
 
                   final profileUrl = data['profileImageUrl'] as String? ?? "";
-                  final nick = nicknameMap[otherUid] ?? "알 수 없음";
+                  final nick = nicknameMap[otherUid] ?? "Unknown";
 
                   return Dismissible(
                     key: ValueKey(doc.id),
@@ -157,13 +161,14 @@ class ChatListScreen extends StatelessWidget {
                         ],
                       ),
                       onTap: () {
-                        print('이 채팅방의 uid는 ${doc.id} 입니다.');
+                        print('The UID of this chat room is ${doc.id}');
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => ChatRoomScreen(
                               chatRoomId: doc.id,
                               userName: nick,
+                              saleStatus: data['saleStatus'] as String? ?? 'selling',
                             ),
                           ),
                         );

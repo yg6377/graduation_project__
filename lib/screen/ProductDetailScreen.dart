@@ -488,8 +488,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           'productTitle'     : prodData['title'] ?? '',
                           'productImageUrl'  : prodData['imageUrl'] ?? '',
                           'productPrice'     : prodData['price'].toString(),
+                          'saleStatus'       : prodData['saleStatus'] ?? 'selling',
                         });
                       }
+
+                      // Read product's saleStatus for passing to ChatRoomScreen
+                      final prodSnap = await FirebaseFirestore.instance
+                          .collection('products')
+                          .doc(widget.productId)
+                          .get();
+                      final prodData = prodSnap.data() as Map<String, dynamic>? ?? {};
+                      final saleStatus = prodData['saleStatus'] ?? 'selling';
 
                       Navigator.push(
                         context,
@@ -497,10 +506,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           builder: (_) => ChatRoomScreen(
                             chatRoomId: chatRoomId,
                             userName:   widget.userName,
-                            //productTitle: widget.title,
-                            //productImageUrl: widget.imageUrl,
-                            //productPrice: widget.price,
-
+                            saleStatus: saleStatus,
                           ),
                         ),
                       );

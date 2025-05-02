@@ -9,11 +9,13 @@ import 'package:graduation_project_1/screen/reviewForm.dart';
 class ChatRoomScreen extends StatefulWidget {
   final String chatRoomId;
   final String userName;
+  final String saleStatus;
 
   const ChatRoomScreen({
     Key? key,
     required this.chatRoomId,
     required this.userName,
+    required this.saleStatus,
   }) : super(key: key);
 
   @override
@@ -311,22 +313,23 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              FutureBuilder<DocumentSnapshot>(
-                                future: FirebaseFirestore.instance.collection('products').doc(productId).get(),
+                              StreamBuilder<DocumentSnapshot>(
+                                stream: FirebaseFirestore.instance.collection('products').doc(productId).snapshots(),
                                 builder: (context, snapshot) {
                                   if (!snapshot.hasData || !snapshot.data!.exists) return SizedBox.shrink();
                                   final productData = snapshot.data!.data() as Map<String, dynamic>;
                                   final isOwner = _currentUser?.uid == productData['sellerUid'];
+                                  final productSaleStatus = productData['saleStatus'] as String? ?? 'selling';
                                   return isOwner
                                       ? DropdownButton<String>(
-                                          value: _saleStatus,
+                                          value: productSaleStatus,
                                           items: [
                                             DropdownMenuItem(value: 'selling', child: Text('Selling')),
                                             DropdownMenuItem(value: 'reserved', child: Text('Reserved')),
                                             DropdownMenuItem(value: 'soldout', child: Text('Sold Out')),
                                           ],
                                           onChanged: (value) async {
-                                            if (value == null || value == _saleStatus) return;
+                                            if (value == null || value == productSaleStatus) return;
                                             final chatRef = FirebaseFirestore.instance
                                                 .collection('chatRooms')
                                                 .doc(widget.chatRoomId);
@@ -376,15 +379,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                                       : Container(
                                           padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
-                                            color: _saleStatus == 'soldout'
+                                            color: productSaleStatus == 'soldout'
                                                 ? Colors.grey
-                                                : _saleStatus == 'reserved'
+                                                : productSaleStatus == 'reserved'
                                                     ? Colors.lightBlueAccent
                                                     : Colors.green,
                                             borderRadius: BorderRadius.circular(8),
                                           ),
                                           child: Text(
-                                            _saleStatus.toUpperCase(),
+                                            productSaleStatus.toUpperCase(),
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontWeight: FontWeight.bold,
