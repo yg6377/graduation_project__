@@ -122,7 +122,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             Text('Available Only',
-                style: TextStyle(color: Color(0xFF3B82F6))),
+                style: TextStyle(
+                    color: Color(0xFF3B82F6),
+                    fontSize: 17 )
+            ),
+
             Checkbox(
               value: _showOnlyAvailable,
               onChanged: (v) =>
@@ -138,9 +142,38 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icon(Icons.search, color: Color(0xFF3B82F6)),
               onPressed: () => Navigator.pushNamed(context, '/search'),
             ),
-            IconButton(
-              icon: Icon(Icons.notifications, color: Color(0xFF3B82F6)),
-              onPressed: () => Navigator.pushNamed(context, '/notification'),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(FirebaseAuth.instance.currentUser?.uid)
+                  .collection('notifications')
+                  .where('read', isEqualTo: false)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                final hasUnread = snapshot.hasData && snapshot.data!.docs.isNotEmpty;
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.notifications, color: Color(0xFF3B82F6)),
+                      onPressed: () => Navigator.pushNamed(context, '/notification'),
+                    ),
+                    if (hasUnread)
+                      Positioned(
+                        right: 8,
+                        bottom: 8,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           ],
         ],

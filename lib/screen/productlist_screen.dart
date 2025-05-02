@@ -387,7 +387,13 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     ? timestampValue.toDate().toString()
                     : '';
 
-                return GestureDetector(
+                return ProductCard(
+                  title: title,
+                  imageUrl: imageUrl,
+                  price: price,
+                  region: region,
+                  saleStatus: saleStatus,
+                  condition: condition,
                   onTap: () async {
                     final user = FirebaseAuth.instance.currentUser;
                     if (user != null) {
@@ -397,14 +403,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
                           .collection('clickedProducts')
                           .doc(productId)
                           .set({'clickedAt': Timestamp.now()});
-                    }
-
-                    print('🟢 Product clicked: $title / $productId / $sellerUid');
-                    print('📸 imageUrl = "$imageUrl"');
-
-                    if (productId.isEmpty || title.isEmpty || sellerUid.isEmpty) {
-                      print('⚠️ 필수 데이터 누락. 이동 중단.');
-                      return;
                     }
 
                     await Navigator.push(
@@ -429,14 +427,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     );
                     setState(() {});
                   },
-                  child: ProductCard(
-                    title: title,
-                    imageUrl: imageUrl,
-                    price: price,
-                    region: region,
-                    saleStatus: saleStatus,
-                    condition: condition,
-                  ),
                 );
               }).toList(),
             ],
@@ -460,7 +450,13 @@ class _ProductListScreenState extends State<ProductListScreen> {
               final String region = productData['region'] ?? 'Unknown';
               final String saleStatus = productData['saleStatus'] ?? '';
 
-              return GestureDetector(
+              return ProductCard(
+                title: title,
+                imageUrl: imageUrl,
+                price: price,
+                region: region,
+                saleStatus: saleStatus,
+                condition: condition,
                 onTap: () async {
                   final user = FirebaseAuth.instance.currentUser;
                   if (user != null) {
@@ -493,14 +489,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   );
                   setState(() {});
                 },
-                child: ProductCard(
-                  title: title,
-                  imageUrl: imageUrl,
-                  price: price,
-                  region: region,
-                  saleStatus: saleStatus,
-                  condition: condition,
-                ),
               );
             }),
           ],
