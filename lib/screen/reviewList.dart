@@ -72,6 +72,7 @@ class ReviewList extends StatelessWidget {
                     Text(
                       formattedTime,
                       style: TextStyle(color: Colors.grey[600], fontSize: 12),
+
                     ),
                   ],
                 ),
