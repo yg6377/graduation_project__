@@ -70,43 +70,96 @@ class MyPostsScreen extends StatelessWidget {
                 }
               }
 
-              return GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProductDetailScreen(
-                        productId: posts[index].id,
-                        title: displayTitle,
-                        price: price,
-                        description: data['description'] ?? '',
-                        imageUrl: imageUrl,
-                        timestamp: formattedTime,
-                        sellerUid: data['sellerUid'] ?? '',
-                        sellerEmail: data['sellerUid'] ?? '',
-                        chatRoomId: '',
-                        userName: nickname,
-                        productTitle: title,
-                        productImageUrl: (data['imageUrls'] != null && data['imageUrls'].isNotEmpty)
-                            ? data['imageUrls'].first.toString()
-                            : ((data['imageUrl'] ?? '').toString().isNotEmpty
-                                ? data['imageUrl']
-                                : 'assets/images/huanhuan_no_image.png'),
-                        productPrice: price,
+              final updatedAt = (data['updatedAt'] as Timestamp?)?.toDate();
+              bool showBump = false;
+              if (updatedAt != null) {
+                final durationSinceUpdate = DateTime.now().difference(updatedAt);
+                showBump = durationSinceUpdate.inHours >= 24;
+              }
+              return Stack(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProductDetailScreen(
+                            productId: posts[index].id,
+                            title: displayTitle,
+                            price: price,
+                            description: data['description'] ?? '',
+                            imageUrl: imageUrl,
+                            timestamp: formattedTime,
+                            sellerUid: data['sellerUid'] ?? '',
+                            sellerEmail: data['sellerUid'] ?? '',
+                            chatRoomId: '',
+                            userName: nickname,
+                            productTitle: title,
+                            productImageUrl: (data['imageUrls'] != null && data['imageUrls'].isNotEmpty)
+                                ? data['imageUrls'].first.toString()
+                                : ((data['imageUrl'] ?? '').toString().isNotEmpty
+                                    ? data['imageUrl']
+                                    : 'assets/images/huanhuan_no_image.png'),
+                            productPrice: price,
+                          ),
+                        ),
+                      );
+                    },
+                    child: ProductCard(
+                      title: displayTitle,
+                      imageUrl: imageUrl,
+                      price: price,
+                      region: region,
+                      saleStatus: saleStatus,
+                      condition: condition,
+                      chatCount: (data['chats'] ?? 0) is int ? data['chats'] : 0,
+                      likeCount: (data['likes'] ?? 0) is int ? data['likes'] : 0,
+                    ),
+                  ),
+                  if (showBump)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: GestureDetector(
+                        onTap: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: Text('Do you want to bump this post to the top?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: Text('No'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: Text('Yes'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirm == true) {
+                            await FirebaseFirestore.instance
+                                .collection('products')
+                                .doc(posts[index].id)
+                                .update({'updatedAt': FieldValue.serverTimestamp()});
+                          }
+                        },
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(color: Colors.blue),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Bump',
+                            style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                          ),
+                        ),
                       ),
                     ),
-                  );
-                },
-                child: ProductCard(
-                  title: displayTitle,
-                  imageUrl: imageUrl,
-                  price: price,
-                  region: region,
-                  saleStatus: saleStatus,
-                  condition: condition,
-                  chatCount: (data['chats'] ?? 0) is int ? data['chats'] : 0,
-                  likeCount: (data['likes'] ?? 0) is int ? data['likes'] : 0,
-                ),
+                ],
               );
             },
           );

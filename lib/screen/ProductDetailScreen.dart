@@ -89,35 +89,32 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       );
       return;
     }
-    final likeRef = FirebaseFirestore.instance
+
+    final productDoc = FirebaseFirestore.instance
         .collection('products')
-        .doc(widget.productId)
+        .doc(widget.productId);
+    final likeRef = productDoc
         .collection('likes')
         .doc(user.uid);
     final likedProductRef = FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('likedProducts')
-        .doc(widget.productId);
+        .doc(widget.productId); // ✅ productId used as doc ID
+
     if (!isLiked) {
-      // Add like to product and add to user's likedProducts
-      await likeRef.set({'liked': true});
-      await likedProductRef.set({'liked': true});
-      await FirebaseFirestore.instance
-          .collection('products')
-          .doc(widget.productId)
-          .update({'likes': FieldValue.increment(1)});
+      await likedProductRef.set({
+        'liked': true,
+        'productId': widget.productId,
+      });
+      await productDoc.update({'likes': FieldValue.increment(1)});
       setState(() {
         isLiked = true;
       });
     } else {
-      // Remove like from product and remove from user's likedProducts
       await likeRef.delete();
       await likedProductRef.delete();
-      await FirebaseFirestore.instance
-          .collection('products')
-          .doc(widget.productId)
-          .update({'likes': FieldValue.increment(-1)});
+      await productDoc.update({'likes': FieldValue.increment(-1)});
       setState(() {
         isLiked = false;
       });

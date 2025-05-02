@@ -68,10 +68,11 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
         'likes': 0, // Initial likes value
         'chats': 0,
         'timestamp': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(), // Added for bump logic
         'sellerUid': user?.uid,
         'condition': selectedCondition,
-        'region': region, // newly added
-        'saleStatus': 'selling', // Added: default to "selling"
+        'region': region,
+        'saleStatus': 'selling',
       });
 
       // Update document ID as 'productId' field (Store Firestore document ID)

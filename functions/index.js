@@ -1,9 +1,10 @@
 // functions/index.js
 const admin = require('firebase-admin');
 admin.initializeApp();
+const functions = require("firebase-functions");
 
 // import the v2 Firestore trigger
-const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
 
 exports.sendChatNotification = onDocumentCreated(
   'chatRooms/{chatRoomId}/message/{messageId}',
@@ -11,7 +12,6 @@ exports.sendChatNotification = onDocumentCreated(
     const snap        = event.data;                // DocumentSnapshot
     const { sender, text } = snap.data();   // path param
 
-    const { sender, text } = snap.data();
     // 1) sender 닉네임 조회
     const userDoc = await admin.firestore().collection('users').doc(sender).get();
     const senderName = userDoc.exists && userDoc.data().nickname
@@ -49,3 +49,42 @@ exports.sendChatNotification = onDocumentCreated(
     return admin.messaging().sendToDevice(tokens, payload);
   }
 );
+
+exports.onProductPriceChange = onDocumentUpdated("products/{productId}", async (event) => {
+  const change = event.data;
+  const before = change.before.data();
+  const after = change.after.data();
+
+  if (before.price !== after.price) {
+    const productId = event.params.productId;
+    const newPrice = after.price;
+
+    const likedByRef = admin.firestore()
+      .collectionGroup('likedProducts')
+      .where('productId', '==', productId)
+
+    return likedByRef.get().then(snapshot => {
+      const batch = admin.firestore().batch();
+
+      snapshot.forEach(doc => {
+        const userId = doc.ref.parent.parent.id;
+        const notificationRef = admin.firestore()
+          .collection("users")
+          .doc(userId)
+          .collection("notifications")
+          .doc();
+
+        batch.set(notificationRef, {
+          productId,
+          message: `Price updated to ${newPrice}`,
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          seen: false,
+        });
+      });
+
+      return batch.commit();
+    });
+  }
+
+  return null;
+});
