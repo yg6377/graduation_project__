@@ -197,6 +197,8 @@ class SearchResultScreen extends StatelessWidget {
             final String price = productData['price']?.toString() ?? '';
             final String region = productData['region'] ?? '';
             final String saleStatus = productData['saleStatus'] ?? '';
+            final int likeCount = (productData['likes'] ?? 0) is int ? productData['likes'] : 0;
+            final int chatCount = (productData['chats'] ?? 0) is int ? productData['chats'] : 0;
 
             return ProductCard(
               title: title,
@@ -204,6 +206,9 @@ class SearchResultScreen extends StatelessWidget {
               price: price,
               region: region,
               saleStatus: saleStatus,
+              condition: '',
+              likeCount: likeCount,
+              chatCount: chatCount,
               onTap: () {
                 final timestampValue = productData['timestamp'];
                 final String timestampString = (timestampValue is Timestamp)
@@ -247,7 +252,7 @@ class SearchResultScreen extends StatelessWidget {
                 } catch (e) {
                   print('❌ Navigator.push failed: $e');
                 }
-              }, condition: '',
+              },
             );
           },
         ),

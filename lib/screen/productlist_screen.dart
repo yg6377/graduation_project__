@@ -12,6 +12,8 @@ class ProductCard extends StatelessWidget {
   final String region;
   final String saleStatus;
   final String condition;
+  final int likeCount;
+  final int chatCount;
   final VoidCallback? onTap;
 
   const ProductCard({
@@ -22,6 +24,8 @@ class ProductCard extends StatelessWidget {
     required this.region,
     required this.saleStatus,
     required this.condition,
+    required this.likeCount,
+    required this.chatCount,
     this.onTap,
   }) : super(key: key);
 
@@ -49,19 +53,7 @@ class ProductCard extends StatelessWidget {
             // 이미지
             ClipRRect(
               borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-              child: imageUrl.startsWith('http')
-                  ? Image.network(
-                      imageUrl,
-                      height: 160,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    )
-                  : Image.asset(
-                      imageUrl,
-                      height: 160,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
+              child: _buildImage(imageUrl),
             ),
             // 텍스트 내용
             Padding(
@@ -146,6 +138,19 @@ class ProductCard extends StatelessWidget {
                     '$price NTD',
                     style: TextStyle(color: Colors.blue, fontSize: 15),
                   ),
+                  // Add Row for chat and like counts
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Icon(Icons.chat_bubble_outline, size: 14, color: Colors.grey),
+                      SizedBox(width: 4),
+                      Text('$chatCount', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      SizedBox(width: 12),
+                      Icon(Icons.favorite_border, size: 14, color: Colors.grey),
+                      SizedBox(width: 4),
+                      Text('$likeCount', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -169,6 +174,24 @@ class ProductCard extends StatelessWidget {
         return Colors.red;
       default:
         return Colors.grey;
+    }
+  }
+
+  Widget _buildImage(String imageUrl) {
+    if (imageUrl.isNotEmpty && imageUrl.startsWith('http')) {
+      return Image.network(
+        imageUrl,
+        height: 160,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    } else {
+      return Image.asset(
+        'assets/images/huanhuan_no_image.png',
+        height: 160,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
     }
   }
 }
@@ -390,6 +413,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 final String timestampString = (timestampValue is Timestamp)
                     ? timestampValue.toDate().toString()
                     : '';
+                final int likeCount = (data['likes'] ?? 0) is int ? data['likes'] : 0;
+                final int chatCount = (data['chats'] ?? 0) is int ? data['chats'] : 0;
 
                 return ProductCard(
                   title: title,
@@ -398,6 +423,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   region: region,
                   saleStatus: saleStatus,
                   condition: condition,
+                  likeCount: likeCount,
+                  chatCount: chatCount,
                   onTap: () async {
                     final user = FirebaseAuth.instance.currentUser;
                     if (user != null) {
@@ -430,7 +457,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                         ),
                       ),
                     );
-                    setState(() {});
+                    await _loadRegionProducts();
                   },
                 );
               }).toList(),
@@ -458,6 +485,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
               final String sellerUid = productData['sellerUid'] ?? '';
               final String region = productData['region'] ?? 'Unknown';
               final String saleStatus = productData['saleStatus'] ?? '';
+              final int likeCount = (productData['likes'] ?? 0) is int ? productData['likes'] : 0;
+              final int chatCount = (productData['chats'] ?? 0) is int ? productData['chats'] : 0;
 
               return ProductCard(
                 title: title,
@@ -466,6 +495,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 region: region,
                 saleStatus: saleStatus,
                 condition: condition,
+                likeCount: likeCount,
+                chatCount: chatCount,
                 onTap: () async {
                   final user = FirebaseAuth.instance.currentUser;
                   if (user != null) {
@@ -497,7 +528,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       ),
                     ),
                   );
-                  setState(() {});
+                  await _loadRegionProducts();
                 },
               );
             }),
