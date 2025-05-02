@@ -280,6 +280,76 @@ class _MyPageScreenState extends State<MyPageScreen> {
               ),
             ),
             SizedBox(height: 20),
+            Divider(thickness: 2),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Received Review",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.blueGrey[900],
+                      fontFamily: CupertinoTheme.of(context).textTheme.textStyle.fontFamily,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(_currentUser?.uid)
+                        .collection('review')
+                        .orderBy('timestamp', descending: true)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Center(child: CircularProgressIndicator());
+                      }
+                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                        return Text("No reviews yet.", style: TextStyle(color: Colors.grey));
+                      }
+                      return Column(
+                        children: snapshot.data!.docs.map((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          return Card(
+                            margin: EdgeInsets.symmetric(vertical: 6),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 2,
+                            child: ListTile(
+                              title: Text(
+                                data['fromNickname'] ?? 'Unknown',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(height: 4),
+                                  Text(data['comment'] ?? ''),
+                                  SizedBox(height: 4),
+                                  Row(
+                                    children: List.generate(5, (index) {
+                                      return Icon(
+                                        index < (data['rating'] ?? 0)
+                                            ? Icons.star
+                                            : Icons.star_border,
+                                        color: Colors.amber,
+                                        size: 20,
+                                      );
+                                    }),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

@@ -222,6 +222,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         return Text('Uploader: Unknown', style: TextStyle(fontSize: 14, color: Colors.grey));
                       }
                       final data = snapshot.data!.data() as Map<String, dynamic>;
+                      final uidInUserDoc = data['userId'];
+                      if (uidInUserDoc != widget.sellerUid) {
+                        return Text('⚠️ 판매자 정보가 상품과 일치하지 않습니다.', style: TextStyle(fontSize: 14, color: Colors.red));
+                      }
                       final nickname = data['nickname'] ?? 'Unknown';
                       final region = data['region'] ?? '';
                       final profileImage = data['profileImageUrl'];
@@ -453,7 +457,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                       // 1) 채팅방 아이디 생성
                       List<String> uids = [myUid, sellerUid]..sort();
-                      final chatRoomId = uids.join('_');
+                      final chatRoomId = '${uids.join('_')}_${widget.productId}';
                       final chatRef    = FirebaseFirestore.instance
                           .collection('chatRooms')
                           .doc(chatRoomId);

@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:another_flushbar/flushbar.dart';
 import 'ProductDetailScreen.dart';
+import 'package:graduation_project_1/screen/reviewForm.dart';
 
 class ChatRoomScreen extends StatefulWidget {
   final String chatRoomId;
@@ -25,11 +26,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final User? _currentUser = FirebaseAuth.instance.currentUser;
   late StreamSubscription<QuerySnapshot> _msgSub;
 
-  String _myNickname = '나';
-  String _otherUserNickname = '상대방';
+  String _myNickname = 'Me';
+  String _otherUserNickname = 'Other User';
   late String otherUid;
 
   String _saleStatus = 'selling';
+
+  bool _otherUserLeft = false;
 
   @override
   void initState() {
@@ -152,26 +155,39 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               borderRadius: BorderRadius.circular(16),
             ),
             child: isReviewPrompt
-                ? GestureDetector(
-                    onTap: () {
-                      // TODO: navigate to review screen
-                    },
-                    child: RichText(
-                      text: TextSpan(
-                        text: 'Did you have a good transaction with $_otherUserNickname? ',
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Did you have a good transaction with $_otherUserNickname?',
                         style: TextStyle(color: Colors.deepOrange[900]),
-                        children: [
-                          TextSpan(
-                            text: 'Leave a review.',
-                            style: TextStyle(
-                              decoration: TextDecoration.underline,
-                              color: Colors.deepOrange[900],
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                        textAlign: TextAlign.center,
                       ),
-                    ),
+                      SizedBox(height: 6),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ReviewForm(
+                                toUserId: otherUid,
+                                fromUserId: _currentUser!.uid,
+                                fromNickname: _myNickname,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          'Leave a review',
+                          style: TextStyle(
+                            decoration: TextDecoration.underline,
+                            color: Colors.deepOrange[900],
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
                   )
                 : Text(
                     data['text'],
@@ -222,13 +238,41 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         final price = data['productPrice'] as String? ?? '';
         final saleStatusFromDb = data['saleStatus'] as String? ?? 'selling';
         final productId = data['productId'] as String? ?? '';
-        final sellerUid = data['sellerUid'] as String? ?? '';
+        // final sellerUid = data['sellerUid'] as String? ?? '';
+
+        // --- Leaver check ---
+        final leavers = List<String>.from(data['leavers'] ?? []);
+        if (leavers.contains(otherUid)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _otherUserLeft = true;
+              });
+            }
+          });
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              '⚠️ The other user has left the chat.',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+          );
+        } else {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _otherUserLeft) {
+              setState(() {
+                _otherUserLeft = false;
+              });
+            }
+          });
+        }
+        // --- End leaver check ---
 
         if (productId.isEmpty) {
           return Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
-              '⚠️ chatRoom에 productId가 없습니다.',
+              '⚠️ No productId found for this chat room.',
               style: TextStyle(color: Colors.red),
             ),
           );
@@ -267,88 +311,89 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              _currentUser?.uid == sellerUid
-                                  ? DropdownButton<String>(
-                                      value: _saleStatus,
-                                      items: [
-                                        DropdownMenuItem(value: 'selling', child: Text('Selling')),
-                                        DropdownMenuItem(value: 'reserved', child: Text('Reserved')),
-                                        DropdownMenuItem(value: 'soldout', child: Text('Sold Out')),
-                                      ],
-                                      onChanged: (value) async {
-                                        if (value == null || value == _saleStatus) return;
-                                        final chatRef = FirebaseFirestore.instance
-                                            .collection('chatRooms')
-                                            .doc(widget.chatRoomId);
-                                        await chatRef.update({'saleStatus': value});
-                                        if (productId.isNotEmpty) {
-                                          await FirebaseFirestore.instance
-                                              .collection('products')
-                                              .doc(productId)
-                                              .update({'saleStatus': value});
-                                        }
-                                        setState(() {
-                                          _saleStatus = value;
-                                        });
-                                        if (value == 'reserved') {
-                                          await chatRef.collection('message').add({
-                                            'text': 'You have scheduled a transaction with $_otherUserNickname.',
-                                            'sender': 'system',
-                                            'timestamp': FieldValue.serverTimestamp(),
-                                          });
-                                        }
-                                        if (value == 'soldout') {
-                                          final reviewPrompt = 'Did you have a good transaction with $_otherUserNickname? Leave a review. [Review]';
-
-                                          await FirebaseFirestore.instance
-                                              .collection('chatRooms')
-                                              .doc(widget.chatRoomId)
-                                              .collection('message')
-                                              .add({
-                                            'text': reviewPrompt,
-                                            'sender': 'system',
-                                            'timestamp': FieldValue.serverTimestamp(),
-                                            'type': 'review_prompt',
-                                          });
-
-                                          // Optional: Save review notification
-                                          await FirebaseFirestore.instance
-                                              .collection('users')
-                                              .doc(otherUid)
-                                              .collection('notifications')
-                                              .add({
-                                            'type': 'transactionComplete',
-                                            'from': _currentUser?.uid,
-                                            'to': otherUid,
-                                            'nickname': _myNickname,
-                                            'message': '$_myNickname completed a transaction with you. Tap to leave a review!',
-                                            'timestamp': FieldValue.serverTimestamp(),
-                                            'read': false,
-                                            'chatRoomId': widget.chatRoomId,
-                                            'productId': productId,
-                                          });
-                                        }
-                                      },
-                                    )
-                                  : Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: _saleStatus == 'soldout'
-                                            ? Colors.grey
-                                            : _saleStatus == 'reserved'
-                                                ? Colors.lightBlueAccent
-                                                : Colors.green,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        _saleStatus.toUpperCase(),
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
+                              FutureBuilder<DocumentSnapshot>(
+                                future: FirebaseFirestore.instance.collection('products').doc(productId).get(),
+                                builder: (context, snapshot) {
+                                  if (!snapshot.hasData || !snapshot.data!.exists) return SizedBox.shrink();
+                                  final productData = snapshot.data!.data() as Map<String, dynamic>;
+                                  final isOwner = _currentUser?.uid == productData['sellerUid'];
+                                  return isOwner
+                                      ? DropdownButton<String>(
+                                          value: _saleStatus,
+                                          items: [
+                                            DropdownMenuItem(value: 'selling', child: Text('Selling')),
+                                            DropdownMenuItem(value: 'reserved', child: Text('Reserved')),
+                                            DropdownMenuItem(value: 'soldout', child: Text('Sold Out')),
+                                          ],
+                                          onChanged: (value) async {
+                                            if (value == null || value == _saleStatus) return;
+                                            final chatRef = FirebaseFirestore.instance
+                                                .collection('chatRooms')
+                                                .doc(widget.chatRoomId);
+                                            await chatRef.update({'saleStatus': value});
+                                            if (productId.isNotEmpty) {
+                                              await FirebaseFirestore.instance
+                                                  .collection('products')
+                                                  .doc(productId)
+                                                  .update({'saleStatus': value});
+                                            }
+                                            setState(() {
+                                              _saleStatus = value;
+                                            });
+                                            if (value == 'reserved') {
+                                              await chatRef.collection('message').add({
+                                                'text': 'You have scheduled a transaction with $_otherUserNickname.',
+                                                'sender': 'system',
+                                                'timestamp': FieldValue.serverTimestamp(),
+                                              });
+                                            }
+                                            if (value == 'soldout') {
+                                              final reviewPrompt = 'Did you have a good transaction with $_otherUserNickname? Leave a review. [Review]';
+                                              await chatRef.collection('message').add({
+                                                'text': reviewPrompt,
+                                                'sender': 'system',
+                                                'timestamp': FieldValue.serverTimestamp(),
+                                                'type': 'review_prompt',
+                                              });
+                                              await FirebaseFirestore.instance
+                                                  .collection('users')
+                                                  .doc(otherUid)
+                                                  .collection('notifications')
+                                                  .add({
+                                                'type': 'transactionComplete',
+                                                'from': _currentUser?.uid,
+                                                'to': otherUid,
+                                                'nickname': _myNickname,
+                                                'message': '$_myNickname completed a transaction with you. Tap to leave a review!',
+                                                'timestamp': FieldValue.serverTimestamp(),
+                                                'read': false,
+                                                'chatRoomId': widget.chatRoomId,
+                                                'productId': productId,
+                                              });
+                                            }
+                                          },
+                                        )
+                                      : Container(
+                                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: _saleStatus == 'soldout'
+                                                ? Colors.grey
+                                                : _saleStatus == 'reserved'
+                                                    ? Colors.lightBlueAccent
+                                                    : Colors.green,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            _saleStatus.toUpperCase(),
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        );
+                                },
+                              ),
                               SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -381,6 +426,56 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       appBar: AppBar(
         centerTitle: true,
         title: Text(_otherUserNickname),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.exit_to_app),
+            tooltip: 'Leave',
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: Text('Do you want to leave the chat room?'),
+                  actions: [
+                    TextButton(
+                      child: Text('No'),
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                    ),
+                    TextButton(
+                      child: Text('Yes'),
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirmed == true && _currentUser?.uid != null) {
+                final chatRoomRef = FirebaseFirestore.instance.collection('chatRooms').doc(widget.chatRoomId);
+                final doc = await chatRoomRef.get();
+                final data = doc.data() ?? {};
+                final participants = List<String>.from(data['participants'] ?? []);
+                final uid = _currentUser!.uid;
+
+                await chatRoomRef.update({
+                  'leavers': FieldValue.arrayUnion([uid]),
+                });
+
+                final updatedDoc = await chatRoomRef.get();
+                final updatedLeavers = List<String>.from(updatedDoc.data()?['leavers'] ?? []);
+
+                final allLeft = participants.every((uid) => updatedLeavers.contains(uid));
+                if (allLeft) {
+                  final messages = await chatRoomRef.collection('message').get();
+                  for (final msg in messages.docs) {
+                    await msg.reference.delete();
+                  }
+                  await chatRoomRef.delete();
+                }
+
+                if (mounted) Navigator.of(context).pop();
+              }
+            },
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(70),
           child: _productHeader(),
@@ -416,22 +511,45 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             ),
             Padding(
               padding: EdgeInsets.all(8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      decoration: InputDecoration(
-                        hintText: 'Enter Message...',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              child: _otherUserLeft
+                  ? Container(
+                      width: double.infinity,
+                      margin: EdgeInsets.symmetric(vertical: 8),
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.red),
                       ),
-                      onSubmitted: (_) => _sendMessage(),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info, color: Colors.red),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'You cannot send a message because the other user has left the chat.',
+                              style: TextStyle(color: Colors.red[800], fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _messageController,
+                            decoration: InputDecoration(
+                              hintText: 'Enter your message...',
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onSubmitted: (_) => _sendMessage(),
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        IconButton(icon: Icon(Icons.send, color: Colors.blue), onPressed: _sendMessage),
+                      ],
                     ),
-                  ),
-                  SizedBox(width: 8),
-                  IconButton(icon: Icon(Icons.send, color: Colors.blue), onPressed: _sendMessage),
-                ],
-              ),
             ),
           ],
         ),
