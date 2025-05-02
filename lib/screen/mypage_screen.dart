@@ -99,14 +99,37 @@ class _MyPageScreenState extends State<MyPageScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                _currentUser?.displayName ?? 'No nickname',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.blueGrey[900],
-                                  fontFamily: CupertinoTheme.of(context).textTheme.textStyle.fontFamily,
-                                ),
+                              Row(
+                                children: [
+                                  Text(
+                                    _currentUser?.displayName ?? 'No nickname',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.blueGrey[900],
+                                      fontFamily: CupertinoTheme.of(context).textTheme.textStyle.fontFamily,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  FutureBuilder<QuerySnapshot>(
+                                    future: FirebaseFirestore.instance
+                                        .collection('users')
+                                        .doc(_currentUser?.uid)
+                                        .collection('reviews')
+                                        .get(),
+                                    builder: (context, snapshot) {
+                                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                                        return Text("(0.0 ★)", style: TextStyle(fontSize: 16, color: Colors.grey[600]));
+                                      }
+                                      final reviews = snapshot.data!.docs;
+                                      double avg = reviews
+                                          .map((doc) => (doc.data() as Map<String, dynamic>)['rating'] ?? 0.0)
+                                          .fold(0.0, (a, b) => a + b) /
+                                          reviews.length;
+                                      return Text("(${avg.toStringAsFixed(1)} ★)", style: TextStyle(fontSize: 16, color: Colors.orange[800]));
+                                    },
+                                  ),
+                                ],
                               ),
                               SizedBox(height: 6),
                               FutureBuilder<DocumentSnapshot>(
@@ -300,7 +323,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
                     stream: FirebaseFirestore.instance
                         .collection('users')
                         .doc(_currentUser?.uid)
-                        .collection('review')
+                        .collection('reviews')
                         .orderBy('timestamp', descending: true)
                         .snapshots(),
                     builder: (context, snapshot) {
@@ -314,32 +337,48 @@ class _MyPageScreenState extends State<MyPageScreen> {
                         children: snapshot.data!.docs.map((doc) {
                           final data = doc.data() as Map<String, dynamic>;
                           return Card(
-                            margin: EdgeInsets.symmetric(vertical: 6),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            elevation: 2,
-                            child: ListTile(
-                              title: Text(
-                                data['fromNickname'] ?? 'Unknown',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  SizedBox(height: 4),
-                                  Text(data['comment'] ?? ''),
-                                  SizedBox(height: 4),
-                                  Row(
-                                    children: List.generate(5, (index) {
-                                      return Icon(
-                                        index < (data['rating'] ?? 0)
-                                            ? Icons.star
-                                            : Icons.star_border,
-                                        color: Colors.amber,
-                                        size: 20,
-                                      );
-                                    }),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              side: BorderSide(color: Color(0xFFB6DBF8), width: 1),
+                            ),
+                            shadowColor: Colors.transparent,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Color(0xFFB6DBF8), width: 1),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Color(0xFFB6DBF8).withOpacity(0.3),
+                                    blurRadius: 6,
+                                    offset: Offset(0, 3),
                                   ),
                                 ],
+                              ),
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      data['nickname'] ?? 'Unknown',
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    ),
+                                    SizedBox(height: 6),
+                                    Text(data['comment'] ?? '', style: TextStyle(fontSize: 14)),
+                                    SizedBox(height: 8),
+                                    Row(
+                                      children: List.generate(5, (index) {
+                                        return Icon(
+                                          index < (data['rating'] ?? 0) ? Icons.star : Icons.star_border,
+                                          color: Colors.amber,
+                                          size: 20,
+                                        );
+                                      }),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           );

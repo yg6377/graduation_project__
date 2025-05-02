@@ -464,8 +464,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                       // 2) 채팅방이 없으면, 상품 정보도 같이 읽어서 만든다
                       final chatSnapshot = await chatRef.get();
-                      if (!chatSnapshot.exists) {
-                        // → 여기서 prodData 를 정의!
+                      if (chatSnapshot.exists) {
+                        final existingData = chatSnapshot.data() as Map<String, dynamic>;
+                        final leavers = List<String>.from(existingData['leavers'] ?? []);
+                        if (leavers.contains(myUid)) {
+                          // Remove current user from leavers list to rejoin chat
+                          await chatRef.update({
+                            'leavers': FieldValue.arrayRemove([myUid])
+                          });
+                        }
+                      } else {
+                        // create new chat room
                         final prodSnap = await FirebaseFirestore.instance
                             .collection('products')
                             .doc(widget.productId)
@@ -489,6 +498,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           'productImageUrl'  : prodData['imageUrl'] ?? '',
                           'productPrice'     : prodData['price'].toString(),
                           'saleStatus'       : prodData['saleStatus'] ?? 'selling',
+                          'leavers'          : [], // initialize
                         });
                       }
 
