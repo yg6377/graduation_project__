@@ -99,6 +99,17 @@ class ChatListScreen extends StatelessWidget {
                     direction: DismissDirection.endToStart,
                     onDismissed: (_) async {
                       final chatRoomRef = FirebaseFirestore.instance.collection('chatRooms').doc(doc.id);
+                      await chatRoomRef.set({
+                        'participants': [me, otherUid],
+                        'leavers': [],
+                        'lastMessage': '',
+                        'lastTime': FieldValue.serverTimestamp(),
+                        'unreadCounts': {
+                          me: 0,
+                          otherUid: 0,
+                        },
+                      });
+
                       final data = doc.data()! as Map<String, dynamic>;
                       final participants = List<String>.from(data['participants'] ?? []);
                       final currentUid = FirebaseAuth.instance.currentUser?.uid;
@@ -135,38 +146,34 @@ class ChatListScreen extends StatelessWidget {
                             : AssetImage('assets/images/default_profile.png')
                         as ImageProvider,
                       ),
-                      title: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+                      title: Text(
+                        nick,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+
+                      subtitle: Text(
+                        lastMsg,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(
-                            nick,
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                          ),
                           Text(
                             lastTime,
                             style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
-                        ],
-                      ),
-                      subtitle: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              lastMsg,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
+                          SizedBox(height: 6),
                           if (unread > 0)
                             Container(
-                              width: 20,
-                              height: 20,
-                              margin: EdgeInsets.only(left: 8, top: 2),
+                              padding: EdgeInsets.all(6),
                               decoration: BoxDecoration(
                                 color: Colors.red,
                                 shape: BoxShape.circle,
                               ),
-                              alignment: Alignment.center,
                               child: Text(
                                 '$unread',
                                 style: TextStyle(color: Colors.white, fontSize: 12),
@@ -174,12 +181,14 @@ class ChatListScreen extends StatelessWidget {
                             ),
                         ],
                       ),
+
                       onTap: () {
                         print('The UID of this chat room is ${doc.id}');
                         FirebaseFirestore.instance
                             .collection('chatRooms')
                             .doc(doc.id)
                             .update({'unreadCounts.$me': 0});
+
 
                         Navigator.push(
                           context,

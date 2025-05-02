@@ -127,6 +127,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     await chatRef.update({
       'lastMessage': text,
       'lastTime': FieldValue.serverTimestamp(),
+      'unreadCounts.$otherUid': FieldValue.increment(1),
     });
 
     _messageController.clear();
