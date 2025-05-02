@@ -20,6 +20,7 @@ class ProductDetailScreen extends StatefulWidget {
   final String productTitle;
   final String productImageUrl;
   final String productPrice;
+  final List<String>? imageUrls;
 
   const ProductDetailScreen({
     required this.productId,
@@ -35,6 +36,7 @@ class ProductDetailScreen extends StatefulWidget {
     required this.productTitle,
     required this.productImageUrl,
     required this.productPrice,
+    this.imageUrls,
     Key? key,
   }) : super(key: key);
 
@@ -45,11 +47,19 @@ class ProductDetailScreen extends StatefulWidget {
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   bool isLiked = false;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
 
   @override
   void initState() {
     super.initState();
     _fetchLikeStatus();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchLikeStatus() async {
@@ -121,7 +131,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
     final isOwner = FirebaseAuth.instance.currentUser?.uid == widget.sellerUid;
     return Scaffold(
-
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,10 +141,51 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 SizedBox(
                   width: MediaQuery.of(context).size.width,
                   height: 340,
-                  child: widget.imageUrl.isNotEmpty
-                      ? Image.network(widget.imageUrl, fit: BoxFit.cover)
-                      : Image.asset('assets/images/huanhuan_no_image.png', fit: BoxFit.cover),
+                  child: Builder(
+                    builder: (_) {
+                      if (widget.imageUrls != null && widget.imageUrls!.isNotEmpty) {
+                        return PageView.builder(
+                          controller: _pageController,
+                          itemCount: widget.imageUrls!.length,
+                          onPageChanged: (index) {
+                            setState(() {
+                              _currentPage = index;
+                            });
+                          },
+                          itemBuilder: (context, index) {
+                            final imageUrl = widget.imageUrls![index];
+                            return Image.network(imageUrl, fit: BoxFit.cover);
+                          },
+                        );
+                      } else if (widget.imageUrl.isNotEmpty) {
+                        return Image.network(widget.imageUrl, fit: BoxFit.cover);
+                      } else {
+                        return Image.asset('assets/images/huanhuan_no_image.png', fit: BoxFit.cover);
+                      }
+                    },
+                  ),
                 ),
+                // Page indicator
+                if (widget.imageUrls != null && widget.imageUrls!.length > 1)
+                  Positioned(
+                    bottom: 12,
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(widget.imageUrls!.length, (index) {
+                        return Container(
+                          margin: EdgeInsets.symmetric(horizontal: 4),
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _currentPage == index ? Colors.white : Colors.white54,
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
                 Positioned(
                   top: 16,
                   left: 16,
@@ -165,7 +215,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   title: widget.title,
                                   price: widget.price,
                                   description: widget.description,
-                                  imageUrl: widget.imageUrl,
+                                  imageUrl: widget.imageUrls?.isNotEmpty == true ? widget.imageUrls!.first : '',
                                 ),
                               ),
                             );
