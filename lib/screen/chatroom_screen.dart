@@ -132,10 +132,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     _messageController.clear();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
+        _scrollController.jumpTo(
           _scrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeOut,
+
         );
       }
     });
@@ -143,6 +142,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   Widget _buildMessageItem(QueryDocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    String time = '';
+    if (data['timestamp'] != null) {
+      final dt = (data['timestamp'] as Timestamp).toDate();
+      time = '${dt.hour.toString().padLeft(2,'0')}:'
+          '${dt.minute.toString().padLeft(2,'0')}';
+    }
     final isSystem = data['sender'] == 'system';
     if (isSystem) {
       final type = data['type'] ?? '';
@@ -219,7 +224,22 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           children: [
             Text(data['text'], style: TextStyle(fontSize: 16)),
             SizedBox(height: 4),
-            Text(nickname, style: TextStyle(fontSize: 12, color: Colors.black54)),
+            //Text(nickname, style: TextStyle(fontSize: 12, color: Colors.black54)),
+            //Text(time, style: TextStyle(fontSize: 12, color: Colors.black54)),
+          Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+              Text(
+              nickname,
+              style: TextStyle(fontSize: 12, color: Colors.black54),
+          ),
+        SizedBox(width: 6),
+        Text(
+            time,
+            style: TextStyle(fontSize: 12, color: Colors.black54),
+        ),
+    ],
+    ),
           ],
         ),
       ),
@@ -494,18 +514,21 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     .collection('chatRooms')
                     .doc(widget.chatRoomId)
                     .collection('message')
-                    .orderBy('timestamp', descending: false)
+                    .orderBy('timestamp', descending: true)
                     .snapshots(),
                 builder: (ctx, snap) {
                   if (!snap.hasData) {
                     return Center(child: CircularProgressIndicator());
                   }
                   final messages = snap.data!.docs;
+
                   if (messages.isEmpty) {
                     return Center(child: Text('No messages yet.'));
                   }
+
                   return ListView.builder(
                     controller: _scrollController,
+                    reverse:true,
                     itemCount: messages.length,
                     itemBuilder: (ctx, i) => _buildMessageItem(messages[i]),
                   );
