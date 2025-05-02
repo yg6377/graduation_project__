@@ -18,6 +18,30 @@ class ReviewForm extends StatefulWidget {
 }
 
 class _ReviewFormState extends State<ReviewForm> {
+  bool _alreadyReviewed = false;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfReviewed();
+  }
+
+  Future<void> _checkIfReviewed() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.toUserId)
+        .collection('reviews')
+        .where('fromUid', isEqualTo: widget.fromUserId)
+        .limit(1)
+        .get();
+
+    setState(() {
+      _alreadyReviewed = snapshot.docs.isNotEmpty;
+      _isLoading = false;
+    });
+  }
+
   double _rating = 0;
   final _commentController = TextEditingController();
   bool _isSubmitting = false;
@@ -67,82 +91,91 @@ class _ReviewFormState extends State<ReviewForm> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Column(
-        children: [
-          SizedBox(height: 24),
-          Center(
-            child: Image.asset(
-              'assets/images/huanhuan_happy.png',
-              height: 300,
-              fit: BoxFit.contain,
-            ),
-          ),
-          Expanded(
-            child: Center(
-              child: Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                elevation: 4,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Rate your experience',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueGrey[900]),
-                      ),
-                      SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(5, (index) {
-                          return IconButton(
-                            icon: Icon(
-                              index < _rating ? Icons.star : Icons.star_border,
-                              color: Colors.amber,
-                              size: 30,
-                            ),
-                            onPressed: () => setState(() => _rating = index + 1.0),
-                          );
-                        }),
-                      ),
-                      SizedBox(height: 16),
-                      TextField(
-                        controller: _commentController,
-                        decoration: InputDecoration(
-                          labelText: 'Write a comment...',
-                          labelStyle: TextStyle(color: Colors.blueGrey[700]),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                        ),
-                        maxLines: 4,
-                      ),
-                      SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue[700],
-                            padding: EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          onPressed: _isSubmitting ? null : _submitReview,
-                          child: Text(
-                            _isSubmitting ? 'Submitting...' : 'Submit Review',
-                            style: TextStyle(fontSize: 16, color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ],
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : _alreadyReviewed
+              ? Center(
+                  child: Text(
+                    'You already rated this user!',
+                    style: TextStyle(fontSize: 18, color: Colors.red),
                   ),
+                )
+              : Column(
+                  children: [
+                    SizedBox(height: 24),
+                    Center(
+                      child: Image.asset(
+                        'assets/images/huanhuan_happy.png',
+                        height: 300,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: Card(
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Rate your experience',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueGrey[900]),
+                                ),
+                                SizedBox(height: 10),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: List.generate(5, (index) {
+                                    return IconButton(
+                                      icon: Icon(
+                                        index < _rating ? Icons.star : Icons.star_border,
+                                        color: Colors.amber,
+                                        size: 30,
+                                      ),
+                                      onPressed: () => setState(() => _rating = index + 1.0),
+                                    );
+                                  }),
+                                ),
+                                SizedBox(height: 16),
+                                TextField(
+                                  controller: _commentController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Write a comment...',
+                                    labelStyle: TextStyle(color: Colors.blueGrey[700]),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                    filled: true,
+                                    fillColor: Colors.grey[100],
+                                  ),
+                                  maxLines: 4,
+                                ),
+                                SizedBox(height: 20),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue[700],
+                                      padding: EdgeInsets.symmetric(vertical: 14),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    ),
+                                    onPressed: _isSubmitting ? null : _submitReview,
+                                    child: Text(
+                                      _isSubmitting ? 'Submitting...' : 'Submit Review',
+                                      style: TextStyle(fontSize: 16, color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
