@@ -57,6 +57,7 @@ Future<void> _saveDeviceToken() async {
 }
 
 Future<void> main() async {
+  debugPrint('🔥 main started');
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 

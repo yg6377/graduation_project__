@@ -49,7 +49,7 @@ class ProductCard extends StatelessWidget {
             // 이미지
             ClipRRect(
               borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-              child: imageUrl.isNotEmpty
+              child: imageUrl.startsWith('http')
                   ? Image.network(
                       imageUrl,
                       height: 160,
@@ -57,7 +57,7 @@ class ProductCard extends StatelessWidget {
                       fit: BoxFit.cover,
                     )
                   : Image.asset(
-                      'assets/images/huanhuan_no_image.png',
+                      imageUrl,
                       height: 160,
                       width: double.infinity,
                       fit: BoxFit.cover,
@@ -375,7 +375,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 final title = data['title'] ?? '';
                 final condition = data['condition'] ?? '';
                 final price = data['price'].toString();
-                final imageUrl = (data['imageUrl'] ?? '').toString();
+                final List<dynamic>? imageUrls = data['imageUrls'];
+                final String imageUrl =
+                    (imageUrls != null && imageUrls.isNotEmpty)
+                        ? imageUrls.first.toString()
+                        : (data['imageUrl'] ?? 'assets/images/huanhuan_no_image.png').toString();
                 final region = data['region'] ?? 'Unknown';
                 final saleStatus = data['saleStatus'] ?? '';
                 final productId = doc.id;
@@ -414,6 +418,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                           price: price,
                           description: description,
                           imageUrl: imageUrl,
+                          imageUrls: imageUrls?.cast<String>(), // ensure correct type
                           timestamp: timestampString,
                           sellerEmail: sellerEmail,
                           chatRoomId: '',
@@ -443,7 +448,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
               final String title = productData['title'] ?? '';
               final String condition = productData['condition'] ?? '';
               final String price = productData['price'].toString();
-              final String imageUrl = productData['imageUrl'] ?? 'assets/images/huanhuan_no_image.png';
+              final List<dynamic>? imageUrls = productData['imageUrls'];
+              final String imageUrl =
+                  (imageUrls != null && imageUrls.isNotEmpty)
+                      ? imageUrls.first.toString()
+                      : (productData['imageUrl'] ?? 'assets/images/huanhuan_no_image.png').toString();
               final String description = productData['description'] ?? '';
               final String sellerEmail = productData['sellerEmail'] ?? '';
               final String sellerUid = productData['sellerUid'] ?? '';
@@ -476,6 +485,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                         price: price,
                         description: description,
                         imageUrl: imageUrl,
+                        imageUrls: imageUrls?.cast<String>(), // ensure correct type
                         timestamp: timestampString,
                         sellerEmail: sellerEmail,
                         chatRoomId: '',
