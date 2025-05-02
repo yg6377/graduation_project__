@@ -51,79 +51,86 @@ class _LoginScreenState extends State<LoginScreen> {
 
         color: const Color(0xFFEAF6FF),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-
-                Expanded(
-
+          child: Container(
+            height: MediaQuery.of(context).size.height,
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              physics: BouncingScrollPhysics(),
+              child: Center(
+                child: SizedBox(
+                  width: 360,
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Image.asset(
-                        'assets/images/huanhuan_welcome.png',
-                        height: 300,
-                      ),
-                      CupertinoTextField(
-                        controller: _emailController,
-                        placeholder: 'Email',
-                        placeholderStyle: TextStyle(color: CupertinoColors.activeBlue),
-                        keyboardType: TextInputType.emailAddress,
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                      ),
-                      const SizedBox(height: 18),
-                      CupertinoTextField(
-                        controller: _passwordController,
-                        placeholder: 'Password',
-                        placeholderStyle: TextStyle(color: CupertinoColors.activeBlue),
-                        obscureText: true,
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                      ),
-                      const SizedBox(height: 28),
-                      CupertinoTheme(
-                        data: CupertinoTheme.of(context).copyWith(
-                          primaryColor: const Color(0xFF0078B8), // Blue Bottle blue
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            CupertinoButton.filled(
-                              onPressed: login,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              child: const Text('Login'),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Image.asset(
+                            'assets/images/huanhuan_welcome.png',
+                            height: 300,
+                          ),
+                          CupertinoTextField(
+                            controller: _emailController,
+                            placeholder: 'Email',
+                            placeholderStyle: TextStyle(color: CupertinoColors.activeBlue),
+                            keyboardType: TextInputType.emailAddress,
+                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                          ),
+                          const SizedBox(height: 18),
+                          CupertinoTextField(
+                            controller: _passwordController,
+                            placeholder: 'Password',
+                            placeholderStyle: TextStyle(color: CupertinoColors.activeBlue),
+                            obscureText: true,
+                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                          ),
+                          const SizedBox(height: 28),
+                          CupertinoTheme(
+                            data: CupertinoTheme.of(context).copyWith(
+                              primaryColor: const Color(0xFF0078B8), // Blue Bottle blue
                             ),
-                            const SizedBox(height: 14),
-                            CupertinoButton.filled(
-                              onPressed: autoLogin,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              child: const Text('Auto Login'),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                CupertinoButton.filled(
+                                  onPressed: login,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  child: const Text('Login'),
+                                ),
+                                const SizedBox(height: 14),
+                                CupertinoButton.filled(
+                                  onPressed: autoLogin,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  child: const Text('Auto Login'),
+                                ),
+                                const SizedBox(height: 28),
+                              ],
                             ),
-                            const SizedBox(height: 28),
-                          ],
+                          ),
+                          const SizedBox(height: 14),
+                        ],
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 40.0),
+                        child: CupertinoButton(
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/signup');
+                          },
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          child: const Text(
+                            'Is this your first time using the app?',
+                            style: TextStyle(
+                              color: Color(0xFF0078B8),
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 14),
                     ],
                   ),
                 ),
-                CupertinoButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/signup');
-                  },
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  child: const Text(
-                    'Is this your first time using the app?',
-                    style: TextStyle(
-                      color: Color(0xFF0078B8),
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
