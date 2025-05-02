@@ -66,6 +66,7 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
         'description': description,
         'imageUrls': imageUrls,
         'likes': 0, // Initial likes value
+        'chats': 0,
         'timestamp': FieldValue.serverTimestamp(),
         'sellerUid': user?.uid,
         'condition': selectedCondition,

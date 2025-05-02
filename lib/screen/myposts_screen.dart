@@ -42,7 +42,12 @@ class MyPostsScreen extends StatelessWidget {
               final condition = data['condition'] ?? '';
               final title = data['title'] ?? '';
               final displayTitle = title;
-              final imageUrl = data['imageUrl'] ?? '';
+              final imageUrls = data['imageUrls'];
+              final imageUrl = (imageUrls != null && imageUrls.isNotEmpty)
+                  ? imageUrls.first.toString()
+                  : ((data['imageUrl'] ?? '').toString().isNotEmpty
+                      ? data['imageUrl']
+                      : 'assets/images/huanhuan_no_image.png');
               final price = data['price']?.toString() ?? '';
               final nickname = data['userName'] ?? '';
               final region = data['region'] ?? '';
@@ -82,7 +87,11 @@ class MyPostsScreen extends StatelessWidget {
                         chatRoomId: '',
                         userName: nickname,
                         productTitle: title,
-                        productImageUrl: imageUrl,
+                        productImageUrl: (data['imageUrls'] != null && data['imageUrls'].isNotEmpty)
+                            ? data['imageUrls'].first.toString()
+                            : ((data['imageUrl'] ?? '').toString().isNotEmpty
+                                ? data['imageUrl']
+                                : 'assets/images/huanhuan_no_image.png'),
                         productPrice: price,
                       ),
                     ),
@@ -95,6 +104,8 @@ class MyPostsScreen extends StatelessWidget {
                   region: region,
                   saleStatus: saleStatus,
                   condition: condition,
+                  chatCount: (data['chats'] ?? 0) is int ? data['chats'] : 0,
+                  likeCount: (data['likes'] ?? 0) is int ? data['likes'] : 0,
                 ),
               );
             },

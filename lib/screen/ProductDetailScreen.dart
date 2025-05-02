@@ -103,6 +103,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       // Add like to product and add to user's likedProducts
       await likeRef.set({'liked': true});
       await likedProductRef.set({'liked': true});
+      await FirebaseFirestore.instance
+          .collection('products')
+          .doc(widget.productId)
+          .update({'likes': FieldValue.increment(1)});
       setState(() {
         isLiked = true;
       });
@@ -110,6 +114,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       // Remove like from product and remove from user's likedProducts
       await likeRef.delete();
       await likedProductRef.delete();
+      await FirebaseFirestore.instance
+          .collection('products')
+          .doc(widget.productId)
+          .update({'likes': FieldValue.increment(-1)});
       setState(() {
         isLiked = false;
       });
@@ -157,7 +165,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             return Image.network(imageUrl, fit: BoxFit.cover);
                           },
                         );
-                      } else if (widget.imageUrl.isNotEmpty) {
+                      } else if (widget.imageUrl.isNotEmpty && widget.imageUrl.startsWith('http')) {
                         return Image.network(widget.imageUrl, fit: BoxFit.cover);
                       } else {
                         return Image.asset('assets/images/huanhuan_no_image.png', fit: BoxFit.cover);
