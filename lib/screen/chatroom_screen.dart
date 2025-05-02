@@ -25,11 +25,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final User? _currentUser = FirebaseAuth.instance.currentUser;
   late StreamSubscription<QuerySnapshot> _msgSub;
 
-  String _myNickname = '나';
-  String _otherUserNickname = '상대방';
+  String _myNickname = 'Me';
+  String _otherUserNickname = 'Other User';
   late String otherUid;
 
   String _saleStatus = 'selling';
+
+  bool _otherUserLeft = false;
 
   @override
   void initState() {
@@ -224,11 +226,39 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         final productId = data['productId'] as String? ?? '';
         final sellerUid = data['sellerUid'] as String? ?? '';
 
+        // --- Leaver check ---
+        final leavers = List<String>.from(data['leavers'] ?? []);
+        if (leavers.contains(otherUid)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _otherUserLeft = true;
+              });
+            }
+          });
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              '⚠️ The other user has left the chat.',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+          );
+        } else {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _otherUserLeft) {
+              setState(() {
+                _otherUserLeft = false;
+              });
+            }
+          });
+        }
+        // --- End leaver check ---
+
         if (productId.isEmpty) {
           return Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
-              '⚠️ chatRoom에 productId가 없습니다.',
+              '⚠️ No productId found for this chat room.',
               style: TextStyle(color: Colors.red),
             ),
           );
@@ -375,6 +405,56 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       appBar: AppBar(
         centerTitle: true,
         title: Text(_otherUserNickname),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.exit_to_app),
+            tooltip: 'Leave',
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: Text('Do you want to leave the chat room?'),
+                  actions: [
+                    TextButton(
+                      child: Text('No'),
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                    ),
+                    TextButton(
+                      child: Text('Yes'),
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirmed == true && _currentUser?.uid != null) {
+                final chatRoomRef = FirebaseFirestore.instance.collection('chatRooms').doc(widget.chatRoomId);
+                final doc = await chatRoomRef.get();
+                final data = doc.data() ?? {};
+                final participants = List<String>.from(data['participants'] ?? []);
+                final uid = _currentUser!.uid;
+
+                await chatRoomRef.update({
+                  'leavers': FieldValue.arrayUnion([uid]),
+                });
+
+                final updatedDoc = await chatRoomRef.get();
+                final updatedLeavers = List<String>.from(updatedDoc.data()?['leavers'] ?? []);
+
+                final allLeft = participants.every((uid) => updatedLeavers.contains(uid));
+                if (allLeft) {
+                  final messages = await chatRoomRef.collection('message').get();
+                  for (final msg in messages.docs) {
+                    await msg.reference.delete();
+                  }
+                  await chatRoomRef.delete();
+                }
+
+                if (mounted) Navigator.of(context).pop();
+              }
+            },
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(70),
           child: _productHeader(),
@@ -410,22 +490,45 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             ),
             Padding(
               padding: EdgeInsets.all(8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      decoration: InputDecoration(
-                        hintText: 'Enter Message...',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              child: _otherUserLeft
+                  ? Container(
+                      width: double.infinity,
+                      margin: EdgeInsets.symmetric(vertical: 8),
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.red),
                       ),
-                      onSubmitted: (_) => _sendMessage(),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info, color: Colors.red),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'You cannot send a message because the other user has left the chat.',
+                              style: TextStyle(color: Colors.red[800], fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _messageController,
+                            decoration: InputDecoration(
+                              hintText: 'Enter your message...',
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onSubmitted: (_) => _sendMessage(),
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        IconButton(icon: Icon(Icons.send, color: Colors.blue), onPressed: _sendMessage),
+                      ],
                     ),
-                  ),
-                  SizedBox(width: 8),
-                  IconButton(icon: Icon(Icons.send, color: Colors.blue), onPressed: _sendMessage),
-                ],
-              ),
             ),
           ],
         ),

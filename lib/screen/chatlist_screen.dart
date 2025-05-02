@@ -63,7 +63,10 @@ class ChatListScreen extends StatelessWidget {
                   final data = doc.data()! as Map<String, dynamic>;
                   final parts = List<String>.from(data['participants'] ?? []);
                   final otherUid = parts.firstWhere((u) => u != me, orElse: () => "");
-                  final lastMsg = data['lastMessage'] as String? ?? "";
+                  final leavers = List<String>.from(data['leavers'] ?? []);
+                  final lastMsg = (!leavers.contains(me) && leavers.contains(otherUid))
+                      ? "상대방이 대화를 떠났습니다."
+                      : data['lastMessage'] as String? ?? "";
                   final lastTime = formatLastTime(data['lastTime'] as Timestamp?);
 
                   final raw = data['unreadCounts'] as Map<dynamic, dynamic>? ?? {};
@@ -76,10 +79,34 @@ class ChatListScreen extends StatelessWidget {
                   return Dismissible(
                     key: ValueKey(doc.id),
                     direction: DismissDirection.endToStart,
-                    onDismissed: (_) => FirebaseFirestore.instance
-                        .collection('chatRooms')
-                        .doc(doc.id)
-                        .delete(),
+                    onDismissed: (_) async {
+                      final chatRoomRef = FirebaseFirestore.instance.collection('chatRooms').doc(doc.id);
+                      final data = doc.data()! as Map<String, dynamic>;
+                      final participants = List<String>.from(data['participants'] ?? []);
+                      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+
+                      if (currentUid == null) return;
+
+                      // 1. leavers 필드에 현재 유저 추가
+                      await chatRoomRef.update({
+                        'leavers': FieldValue.arrayUnion([currentUid])
+                      });
+
+                      // 2. 상대방도 나간 경우 전체 삭제
+                      final updatedDoc = await chatRoomRef.get();
+                      final updatedData = updatedDoc.data() as Map<String, dynamic>;
+                      final leavers = List<String>.from(updatedData['leavers'] ?? []);
+
+                      final allLeft = participants.every((uid) => leavers.contains(uid));
+
+                      if (allLeft) {
+                        final messages = await chatRoomRef.collection('message').get();
+                        for (final message in messages.docs) {
+                          await message.reference.delete();
+                        }
+                        await chatRoomRef.delete();
+                      }
+                    },
                     background: Container(color: Colors.red),
                     child: ListTile(
                       contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
