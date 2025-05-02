@@ -514,18 +514,21 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     .collection('chatRooms')
                     .doc(widget.chatRoomId)
                     .collection('message')
-                    .orderBy('timestamp', descending: false)
+                    .orderBy('timestamp', descending: true)
                     .snapshots(),
                 builder: (ctx, snap) {
                   if (!snap.hasData) {
                     return Center(child: CircularProgressIndicator());
                   }
                   final messages = snap.data!.docs;
+
                   if (messages.isEmpty) {
                     return Center(child: Text('No messages yet.'));
                   }
+
                   return ListView.builder(
                     controller: _scrollController,
+                    reverse:true,
                     itemCount: messages.length,
                     itemBuilder: (ctx, i) => _buildMessageItem(messages[i]),
                   );
