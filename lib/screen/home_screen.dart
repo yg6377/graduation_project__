@@ -109,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Row(
                   children: [
                     Text(
-                      _selectedRegion ?? '<Select Region>',
+                      _selectedRegion ?? '<None>',
                       style: TextStyle(
                         color: Color(0xFF3B82F6),
                         fontSize: 18,
