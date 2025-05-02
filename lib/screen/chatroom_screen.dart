@@ -138,6 +138,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         );
       }
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);  // reverse:true 면 0이 최신 메시지 위치
+
+      }
+    });
   }
 
   Widget _buildMessageItem(QueryDocumentSnapshot doc) {
@@ -521,7 +527,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     return Center(child: CircularProgressIndicator());
                   }
                   final messages = snap.data!.docs;
-
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (_scrollController.hasClients) {
+    _scrollController.jumpTo(0);
+    }
+    });
                   if (messages.isEmpty) {
                     return Center(child: Text('No messages yet.'));
                   }

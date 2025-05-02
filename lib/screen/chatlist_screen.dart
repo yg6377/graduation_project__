@@ -26,6 +26,24 @@ class ChatListScreen extends StatelessWidget {
           if (!snap.hasData) return Center(child: CircularProgressIndicator());
 
           final docs = snap.data!.docs;
+          final chats = docs.where((doc) {
+            final data = doc.data()! as Map<String, dynamic>;
+            final leavers = List<String>.from(data['leavers'] ?? []);
+            return !leavers.contains(me);
+          }).toList();
+
+          chats.sort((a, b) {
+            final aTs = (a.data()! as Map<String, dynamic>)['lastTime'] as Timestamp?;
+            final bTs = (b.data()! as Map<String, dynamic>)['lastTime'] as Timestamp?;
+
+            if (aTs == null && bTs == null) return 0;
+            if (aTs == null) return 1;    // aTs 없으면 뒤로
+            if (bTs == null) return -1;   // bTs 없으면 a가 앞으로
+
+            return bTs.compareTo(aTs);    // 내림차순
+          });
+          if (chats.isEmpty) return Center(child: Text('No chats available.'));
+
           final nicknameFutures = <Future<void>>[];
           final nicknameMap = <String, String>{};
 
@@ -46,11 +64,6 @@ class ChatListScreen extends StatelessWidget {
             }
           }
 
-          final chats = docs.where((doc) {
-            final data = doc.data()! as Map<String, dynamic>;
-            final leavers = List<String>.from(data['leavers'] ?? []);
-            return !leavers.contains(me);
-          }).toList();
           if (chats.isEmpty) return Center(child: Text('No chats available.'));
 
           return FutureBuilder(
@@ -79,6 +92,7 @@ class ChatListScreen extends StatelessWidget {
 
                   final profileUrl = data['profileImageUrl'] as String? ?? "";
                   final nick = nicknameMap[otherUid] ?? "Unknown";
+
 
                   return Dismissible(
                     key: ValueKey(doc.id),
@@ -162,6 +176,11 @@ class ChatListScreen extends StatelessWidget {
                       ),
                       onTap: () {
                         print('The UID of this chat room is ${doc.id}');
+                        FirebaseFirestore.instance
+                            .collection('chatRooms')
+                            .doc(doc.id)
+                            .update({'unreadCounts.$me': 0});
+
                         Navigator.push(
                           context,
                           MaterialPageRoute(
