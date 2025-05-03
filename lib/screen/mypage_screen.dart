@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:graduation_project_1/screen/edit_profile_screen.dart';
 import 'package:graduation_project_1/screen/myposts_screen.dart';
 import 'package:graduation_project_1/screen/favoritelist_screen.dart';
+import 'package:graduation_project_1/screen/ChangeRegionScreen.dart';
 
 class MyPageScreen extends StatefulWidget {
 
@@ -138,11 +139,18 @@ class _MyPageScreenState extends State<MyPageScreen> {
                                   if (snapshot.connectionState == ConnectionState.waiting) {
                                     return Text("Your Location: ...", style: TextStyle(fontSize: 14, color: Colors.blueGrey));
                                   }
+                                  String regionText = "Unknown";
                                   if (snapshot.hasData && snapshot.data!.exists) {
                                     final region = snapshot.data!.get('region');
-                                    return Text("Your Location: $region", style: TextStyle(fontSize: 14, color: Colors.blueGrey));
+                                    regionText = region.toString();
                                   }
-                                  return Text("Your Location: Unknown", style: TextStyle(fontSize: 14, color: Colors.blueGrey));
+                                  return Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text("Your Location: $regionText", style: TextStyle(fontSize: 14, color: Colors.blueGrey)),
+                                      ),
+                                    ],
+                                  );
                                 },
                               ),
                               SizedBox(height: 18),
