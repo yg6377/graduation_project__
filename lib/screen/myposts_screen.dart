@@ -50,7 +50,16 @@ class MyPostsScreen extends StatelessWidget {
                       : 'assets/images/huanhuan_no_image.png');
               final price = data['price']?.toString() ?? '';
               final nickname = data['userName'] ?? '';
-              final region = data['region'] as Map<String, dynamic>? ?? {};
+              // Safely parse region field which may be a Map or a String
+              final dynamic regionField = data['region'];
+              Map<String, dynamic> region;
+              if (regionField is Map<String, dynamic>) {
+                region = regionField;
+              } else if (regionField is String) {
+                region = {'city': regionField, 'district': ''};
+              } else {
+                region = {};
+              }
 
               final saleStatus = data['saleStatus'] ?? '';
               final timestamp = data['timestamp']?.toDate();
