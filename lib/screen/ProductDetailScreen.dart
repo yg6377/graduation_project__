@@ -107,6 +107,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         'liked': true,
         'productId': widget.productId,
       });
+      await likeRef.set({});
       await productDoc.update({'likes': FieldValue.increment(1)});
       setState(() {
         isLiked = true;
