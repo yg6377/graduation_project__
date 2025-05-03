@@ -100,6 +100,7 @@ class FavoriteListScreen extends StatelessWidget {
                           imageUrls: (data['imageUrls'] != null)
                               ? List<String>.from(data['imageUrls'])
                               : [],
+                          region: region,
                         ),
                       ),
                     );

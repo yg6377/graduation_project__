@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:graduation_project_1/screen/ChangeRegionScreen.dart';
 
 class EditProfileScreen extends StatefulWidget {
   @override
@@ -17,12 +18,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   File? _profileImage;
   final ImagePicker _picker = ImagePicker();
   String? _profileImageUrlFromDB;
-  String? _selectedRegion;
-
-  final List<String> _regions = [
-    'Taipei', 'New Taipei', 'Danshui', 'Keelung', 'Taoyuan',
-    'Hsinchu', 'Taichung', 'Kaohsiung', 'Tainan', 'Hualien'
-  ];
+  String? _savedRegion;
 
   @override
   void initState() {
@@ -47,7 +43,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             _profileImageUrlFromDB = data['profileImageUrl'];
           }
           if (data['region'] != null) {
-            _selectedRegion = data['region'];
+            if (data['region'] is Map && data['region']['city'] != null && data['region']['district'] != null) {
+              _savedRegion = '${data['region']['city']}, ${data['region']['district']}';
+            }
           }
           setState(() {});
         }
@@ -84,17 +82,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           .update({
         'nickname': newNickname,
         if (imageUrl != null) 'profileImageUrl': imageUrl,
-        if (_selectedRegion != null) 'region': _selectedRegion,
+        // no update to 'region' as it's managed separately
       });
 
-      if (_selectedRegion != null) {
+      if (_savedRegion != null) {
         final userProducts = await FirebaseFirestore.instance
             .collection('products')
             .where('sellerUid', isEqualTo: _currentUser!.uid)
             .get();
 
         for (final doc in userProducts.docs) {
-          await doc.reference.update({'region': _selectedRegion});
+          await doc.reference.update({'region': _savedRegion});
         }
       }
 
@@ -111,52 +109,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         Navigator.pop(context, true);
       }
     }
-  }
-
-  void _showRegionPicker() {
-    final initialIndex = _selectedRegion != null ? _regions.indexOf(_selectedRegion!) : 0;
-    showCupertinoModalPopup(
-      context: context,
-      builder: (_) => Container(
-        height: 250,
-        color: CupertinoColors.systemBackground.resolveFrom(context),
-        child: Column(
-          children: [
-            SizedBox(
-              height: 40,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  CupertinoButton(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('Cancel'),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                  CupertinoButton(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('Done'),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: CupertinoPicker(
-                backgroundColor: CupertinoColors.systemBackground.resolveFrom(context),
-                scrollController: FixedExtentScrollController(initialItem: initialIndex),
-                itemExtent: 32,
-                onSelectedItemChanged: (index) {
-                  setState(() {
-                    _selectedRegion = _regions[index];
-                  });
-                },
-                children: _regions.map((region) => Center(child: Text(region))).toList(),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -202,41 +154,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               SizedBox(height: 24),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Region', style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(fontSize: 16)),
-              ),
-              SizedBox(height: 8),
-              GestureDetector(
-                onTap: _showRegionPicker,
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: CupertinoColors.systemGrey6.resolveFrom(context),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: CupertinoColors.systemGrey.resolveFrom(context),
-                      width: 0.5,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'My Region',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        _selectedRegion ?? 'Select a region',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: _selectedRegion == null
-                              ? CupertinoColors.placeholderText
-                              : CupertinoColors.label,
-                        ),
-                      ),
-                      Icon(
-                        CupertinoIcons.chevron_down,
-                        color: CupertinoColors.systemGrey,
-                        size: 20,
-                      ),
-                    ],
-                  ),
+                    SizedBox(height: 8),
+                    Text(
+                      _savedRegion ?? 'None',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ],
                 ),
+              ),
+              SizedBox(height: 16),
+              CupertinoButton(
+                child: Text('Change Location'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    CupertinoPageRoute(builder: (context) => ChangeRegionScreen()),
+                  );
+                },
               ),
               SizedBox(height: 32),
               CupertinoButton(

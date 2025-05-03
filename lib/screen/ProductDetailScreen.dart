@@ -21,6 +21,7 @@ class ProductDetailScreen extends StatefulWidget {
   final String productImageUrl;
   final String productPrice;
   final List<String>? imageUrls;
+  final Map<String, dynamic> region;
 
   const ProductDetailScreen({
     required this.productId,
@@ -36,6 +37,7 @@ class ProductDetailScreen extends StatefulWidget {
     required this.productTitle,
     required this.productImageUrl,
     required this.productPrice,
+    required this.region,
     this.imageUrls,
     Key? key,
   }) : super(key: key);
@@ -213,18 +215,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         icon: Icon(Icons.more_vert, color: Colors.black),
                         onSelected: (value) async {
                           if (value == 'edit') {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => EditScreen(
-                                  productId: widget.productId,
-                                  title: widget.title,
-                                  price: widget.price,
-                                  description: widget.description,
-                                  imageUrl: widget.imageUrls?.isNotEmpty == true ? widget.imageUrls!.first : '',
-                                ),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EditScreen(
+                                productId: widget.productId,
+                                title: widget.title,
+                                price: widget.price,
+                                description: widget.description,
+                                imageUrl: widget.imageUrls?.isNotEmpty == true ? widget.imageUrls!.first : '',
                               ),
-                            );
+                            ),
+                          );
                           } else if (value == 'delete') {
                             bool confirmed = await showDialog(
                               context: context,
@@ -283,7 +285,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         return Text('⚠️ 판매자 정보가 상품과 일치하지 않습니다.', style: TextStyle(fontSize: 14, color: Colors.red));
                       }
                       final nickname = data['nickname'] ?? 'Unknown';
-                      final region = data['region'] ?? '';
+                      final regionData = data['region'] is Map<String, dynamic> ? data['region'] as Map<String, dynamic> : {};
+                      final city = regionData['city'] ?? '';
+                      final district = regionData['district'] ?? '';
                       final profileImage = data['profileImageUrl'];
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,7 +297,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => SellerProfileScreen(sellerUid: widget.sellerUid),
+                          builder: (_) => SellerProfileScreen(sellerUid: widget.sellerUid),
                                 ),
                               );
                             },
@@ -321,7 +325,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                         Icon(Icons.place, size: 16, color: Colors.grey),
                                         SizedBox(width: 4),
                                         Text(
-                                          region,
+                                          '$city, $district',
                                           style: TextStyle(fontSize: 14, color: Colors.grey),
                                         ),
                                       ],

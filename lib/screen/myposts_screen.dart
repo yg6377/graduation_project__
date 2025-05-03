@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:graduation_project_1/screen/productlist_screen.dart';
-import 'ProductDetailScreen.dart'; // Replace with your actual import path
+import 'ProductDetailScreen.dart';
 
 class MyPostsScreen extends StatelessWidget {
   const MyPostsScreen({super.key});
@@ -50,7 +50,8 @@ class MyPostsScreen extends StatelessWidget {
                       : 'assets/images/huanhuan_no_image.png');
               final price = data['price']?.toString() ?? '';
               final nickname = data['userName'] ?? '';
-              final region = data['region'] ?? '';
+              final region = data['region'] as Map<String, dynamic>? ?? {};
+
               final saleStatus = data['saleStatus'] ?? '';
               final timestamp = data['timestamp']?.toDate();
 
@@ -101,6 +102,7 @@ class MyPostsScreen extends StatelessWidget {
                                     ? data['imageUrl']
                                     : 'assets/images/huanhuan_no_image.png'),
                             productPrice: price,
+                            region: region,
                           ),
                         ),
                       );
