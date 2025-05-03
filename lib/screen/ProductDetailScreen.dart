@@ -554,6 +554,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           'productPrice'     : prodData['price'].toString(),
                           'saleStatus'       : prodData['saleStatus'] ?? 'selling',
                           'leavers'          : [], // initialize
+                          'productName'      : prodData['productName'] ?? 'Unknown Product',
+
                         });
                       }
 

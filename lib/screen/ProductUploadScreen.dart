@@ -15,6 +15,9 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
   final TextEditingController titleController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
+  final TextEditingController productNameController = TextEditingController(); //0504
+
+
 
   List<File> _images = [];
   final ImagePicker _picker = ImagePicker();
@@ -22,6 +25,15 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
   String selectedCondition = 'S'; // Default value: Unopened
 
   bool _isUploading = false;
+
+  @override //0504 화면 나가면 메모리 정리(해제) 지워도됨
+  void dispose() {
+    titleController.dispose();
+    priceController.dispose();
+    descriptionController.dispose();
+    productNameController.dispose();
+    super.dispose();
+  }
 
   /// Image selection function
   Future<void> _pickImage() async {
@@ -47,6 +59,8 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
       String title = titleController.text.isEmpty ? "No title" : titleController.text;
       String price = priceController.text.isEmpty ? "Price unknown" : "${priceController.text} ";
       String description = descriptionController.text.isEmpty ? "No description" : descriptionController.text;
+      String productName = productNameController.text.isEmpty ? "Unnamed Product" : productNameController.text; //0504
+
 
       // Upload images
       List<String> imageUrls = [];
@@ -62,6 +76,7 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
       // Create new document in Firestore
       final docRef = await FirebaseFirestore.instance.collection('products').add({
         'title': title,
+        'productName': productName, //0504
         'price': price,
         'description': description,
         'imageUrls': imageUrls,
@@ -193,6 +208,19 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
+
+                        Text('Product Name', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        SizedBox(height: 8),
+                        TextField(
+                          controller: productNameController,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                            hintText: 'Enter product name',
+                          ),
+                        ),
+                        SizedBox(height: 16), //0504
+
 
                         TextField(
                           controller: priceController,

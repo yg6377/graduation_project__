@@ -50,6 +50,8 @@ class ChatListScreen extends StatelessWidget {
           final nicknameFutures = <Future<void>>[];
           final nicknameMap = <String, String>{};
           final profileUrlMap = <String, String>{};
+          final productNameMap = <String, String>{};
+
 
           for (var doc in docs) {
             final data = doc.data()! as Map<String, dynamic>;
@@ -69,6 +71,9 @@ class ChatListScreen extends StatelessWidget {
                     : '';
 
               }));
+            }
+            if (!productNameMap.containsKey(doc.id)) { //이름+상품명
+              productNameMap[doc.id] = data['productName'] ?? 'Unknown Product';
             }
           }
 
@@ -100,6 +105,7 @@ class ChatListScreen extends StatelessWidget {
 
                   final profileUrl = profileUrlMap[otherUid] ?? "";
                   final nick = nicknameMap[otherUid] ?? "Unknown";
+                  final productName = data['productName'] ?? 'Unknown Product';
 
 
                   return Dismissible(
@@ -156,7 +162,7 @@ class ChatListScreen extends StatelessWidget {
                       ),
 
                       title: Text(
-                        nick,
+                        '$nick ($productName)',  // ✅ 상품명 (상대 닉네임) 형태로!
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                       ),
 
