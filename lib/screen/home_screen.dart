@@ -175,6 +175,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
+            IconButton(
+              icon: Icon(Icons.map, color: Color(0xFF3B82F6)),
+              onPressed: () => Navigator.pushNamed(context, '/maptest'),
+            ),
           ],
         ],
         elevation: 0,
