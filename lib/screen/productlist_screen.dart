@@ -238,7 +238,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
         _products = [];
       });
       try {
-        final snap = await FirebaseFirestore.instance.collection('products').get();
+        final snap = await FirebaseFirestore.instance
+            .collection('products')
+            .orderBy('updatedAt', descending: true)
+            .get();
         print('📦 전체 상품 로드 완료: ${snap.docs.length}개');
         setState(() {
           _products = snap.docs;
@@ -256,6 +259,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
       final snap = await FirebaseFirestore.instance
           .collection('products')
           .where('region', isEqualTo: region)
+          .orderBy('updatedAt', descending: true)
           .get();
       print('📦 $region 지역 상품 로드 완료: ${snap.docs.length}개');
       setState(() {
@@ -374,14 +378,17 @@ class _ProductListScreenState extends State<ProductListScreen> {
           }).toList()
         : widget.recommendedProducts;
 
-    // Filter _products if showOnlyAvailable is true
+    // Filter _products if showOnlyAvailable is true, and exclude empty or deleted documents
     final filteredProducts = widget.showOnlyAvailable
         ? _products.where((product) {
+            if (!product.exists || product.data() == null || (product.data() as Map<String, dynamic>).isEmpty) return false;
             final productData = product.data() as Map<String, dynamic>;
             final saleStatus = productData['saleStatus'] ?? '';
             return saleStatus != 'reserved' && saleStatus != 'soldout';
           }).toList()
-        : _products;
+        : _products.where((product) {
+            return product.exists && product.data() != null && (product.data() as Map<String, dynamic>).isNotEmpty;
+          }).toList();
 
     return Scaffold(
       body: Container(
