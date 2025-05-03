@@ -6,6 +6,49 @@ import 'package:another_flushbar/flushbar.dart';
 import 'ProductDetailScreen.dart';
 import 'package:graduation_project_1/screen/reviewForm.dart';
 
+class ChatBubbleClipperLeft extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    path.moveTo(10, 0);
+    path.lineTo(size.width - 10, 0);
+    path.quadraticBezierTo(size.width, 0, size.width, 10);
+    path.lineTo(size.width, size.height - 10);
+    path.quadraticBezierTo(size.width, size.height, size.width - 10, size.height);
+    path.lineTo(10, size.height); //왼쪽 아래
+    path.quadraticBezierTo(0, size.height, 0, size.height - 10);
+    path.lineTo(0, 10);
+    path.quadraticBezierTo(0, 0, 10, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+}
+
+class ChatBubbleClipperRight extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    path.moveTo(0, 0);
+    path.lineTo(size.width - 10, 0);
+    path.quadraticBezierTo(size.width, 0, size.width, 10);
+    path.lineTo(size.width, size.height - 10);
+    path.quadraticBezierTo(size.width, size.height, size.width - 10, size.height);
+    path.lineTo(10, size.height); //왼쪽 아래
+    path.quadraticBezierTo(0, size.height, 0, size.height - 10);
+    path.lineTo(0, 10);
+    path.quadraticBezierTo(0, 0, 10, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+}
+
+
 class ChatRoomScreen extends StatefulWidget {
   final String chatRoomId;
   final String userName;
@@ -25,20 +68,26 @@ class ChatRoomScreen extends StatefulWidget {
 class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final User? _currentUser = FirebaseAuth.instance.currentUser;
+  late User? _currentUser = FirebaseAuth.instance.currentUser;
   late StreamSubscription<QuerySnapshot> _msgSub;
 
   String _myNickname = 'Me';
   String _otherUserNickname = 'Other User';
   late String otherUid;
 
+
+
   String _saleStatus = 'selling';
 
   bool _otherUserLeft = false;
 
+  String _myProfileUrl = '';
+  String _otherUserProfileUrl = '';
+
   @override
   void initState() {
     super.initState();
+    _currentUser = FirebaseAuth.instance.currentUser;
     _loadNicknames();
     _listenForNewMessages();
     _loadSaleStatus();
@@ -91,11 +140,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     if (myDoc.exists && myDoc.data()!.containsKey('nickname')) {
       _myNickname = myDoc['nickname'];
     }
+    if (myDoc.exists && myDoc.data()!.containsKey('profileImageUrl')) {
+      _myProfileUrl = myDoc['profileImageUrl'];
+    }
 
     final otherDoc = await FirebaseFirestore.instance.collection('users').doc(otherUid).get();
     if (otherDoc.exists && otherDoc.data()!.containsKey('nickname')) {
       setState(() {
-        _otherUserNickname = otherDoc['nickname'];
+        if (otherDoc.exists && otherDoc.data()!.containsKey('nickname')) {
+          _otherUserNickname = otherDoc['nickname'];
+        }
+        if (otherDoc.exists && otherDoc.data()!.containsKey('profileImageUrl')) {
+          _otherUserProfileUrl = otherDoc['profileImageUrl'];
+        }
       });
     }
   }
@@ -106,7 +163,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       final data = doc.data()!;
       if (data.containsKey('saleStatus')) {
         setState(() {
-          _saleStatus = data['saleStatus'] as String;
+          if (data.containsKey('nickname')) {
+            _otherUserNickname = data['nickname'];
+          }
+          if (data.containsKey('profileImageUrl')) {
+            _otherUserProfileUrl = data['profileImageUrl'];
+          }
         });
       }
     }
@@ -127,6 +189,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     await chatRef.update({
       'lastMessage': text,
       'lastTime': FieldValue.serverTimestamp(),
+      'unreadCounts.$otherUid': FieldValue.increment(1),
     });
 
     _messageController.clear();
@@ -146,111 +209,132 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     });
   }
 
-  Widget _buildMessageItem(QueryDocumentSnapshot doc) {
+  Widget _buildMessageItem(QueryDocumentSnapshot doc, String? previousSender) {
     final data = doc.data() as Map<String, dynamic>;
+    final isMine = data['sender'] == _currentUser?.uid;
+    final nickname = isMine ? _myNickname : _otherUserNickname;
+    final profileUrl = isMine ? _myProfileUrl : _otherUserProfileUrl;
+
     String time = '';
     if (data['timestamp'] != null) {
       final dt = (data['timestamp'] as Timestamp).toDate();
-      time = '${dt.hour.toString().padLeft(2,'0')}:'
-          '${dt.minute.toString().padLeft(2,'0')}';
+      time = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     }
-    final isSystem = data['sender'] == 'system';
-    if (isSystem) {
-      final type = data['type'] ?? '';
-      final isReviewPrompt = type == 'review_prompt';
-      return Padding(
-        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        child: Center(
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.orange[100],
-              borderRadius: BorderRadius.circular(16),
+
+    final showTail = previousSender != data['sender']; // 이전 발신자랑 다르면 꼬리 O
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment: isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
+        children: [
+          if (!isMine)
+            CircleAvatar(
+              radius: 16,
+              backgroundImage: profileUrl.isNotEmpty
+                  ? NetworkImage(profileUrl)
+                  : AssetImage('assets/images/default_profile.png') as ImageProvider,
             ),
-            child: isReviewPrompt
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Did you have a good transaction with $_otherUserNickname?',
-                        style: TextStyle(color: Colors.deepOrange[900]),
-                        textAlign: TextAlign.center,
+          if (!isMine) SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            children: [
+              if (showTail) // 꼬리 있을 때만 닉네임 보여주기
+                Text(
+                  nickname,
+                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+              if (showTail) SizedBox(height: 2),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: isMine
+                    ? [
+                  Text(
+                    time,
+                    style: TextStyle(fontSize: 12, color: Colors.black54),
+                  ),
+                  SizedBox(width: 4),
+                  showTail
+                      ? ClipPath(
+                    clipper: ChatBubbleClipperRight(),
+                    child: Container(
+                      constraints: BoxConstraints(maxWidth: 250),
+                      padding: EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[200],
                       ),
-                      SizedBox(height: 6),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ReviewForm(
-                                toUserId: otherUid,
-                                fromUserId: _currentUser!.uid,
-                                fromNickname: _myNickname,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          'Leave a review',
-                          style: TextStyle(
-                            decoration: TextDecoration.underline,
-                            color: Colors.deepOrange[900],
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
+                      child: Text(
+                        data['text'],
+                        style: TextStyle(fontSize: 16),
                       ),
-                    ],
+                    ),
                   )
-                : Text(
-                    data['text'],
-                    style: TextStyle(
-                      color: Colors.deepOrange[900],
-                      fontWeight: FontWeight.w600,
+                      : Container(
+                    constraints: BoxConstraints(maxWidth: 250),
+                    padding: EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[200],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      data['text'],
+                      style: TextStyle(fontSize: 16),
                     ),
                   ),
+                ]
+                    : [
+                  showTail
+                      ? ClipPath(
+                    clipper: ChatBubbleClipperLeft(),
+                    child: Container(
+                      constraints: BoxConstraints(maxWidth: 250),
+                      padding: EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                      ),
+                      child: Text(
+                        data['text'],
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  )
+                      : Container(
+                    constraints: BoxConstraints(maxWidth: 250),
+                    padding: EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      data['text'],
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    time,
+                    style: TextStyle(fontSize: 12, color: Colors.black54),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ),
-      );
-    }
-    final isMine = data['sender'] == _currentUser?.uid;
-    final nickname = isMine ? _myNickname : _otherUserNickname;
-
-    return Align(
-      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-        padding: EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: isMine ? Colors.blue[200] : Colors.grey[300],
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(data['text'], style: TextStyle(fontSize: 16)),
-            SizedBox(height: 4),
-            //Text(nickname, style: TextStyle(fontSize: 12, color: Colors.black54)),
-            //Text(time, style: TextStyle(fontSize: 12, color: Colors.black54)),
-          Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-              Text(
-              nickname,
-              style: TextStyle(fontSize: 12, color: Colors.black54),
-          ),
-        SizedBox(width: 6),
-        Text(
-            time,
-            style: TextStyle(fontSize: 12, color: Colors.black54),
-        ),
-    ],
-    ),
-          ],
-        ),
+          if (isMine) SizedBox(width: 8),
+          if (isMine)
+            CircleAvatar(
+              radius: 16,
+              backgroundImage: profileUrl.isNotEmpty
+                  ? NetworkImage(profileUrl)
+                  : AssetImage('assets/images/default_profile.png') as ImageProvider,
+            ),
+        ],
       ),
     );
   }
+
+
 
   Widget _productHeader() {
     return StreamBuilder<DocumentSnapshot>(
@@ -538,10 +622,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
                   return ListView.builder(
                     controller: _scrollController,
-                    reverse:true,
+                    reverse: true,
                     itemCount: messages.length,
-                    itemBuilder: (ctx, i) => _buildMessageItem(messages[i]),
+                    itemBuilder: (ctx, i) {
+                      final current = messages[i];
+                      final previous = i + 1 < messages.length ? messages[i + 1] : null;
+                      final previousSender = previous != null ? (previous.data() as Map<String, dynamic>)['sender'] : null;
+
+
+                      return _buildMessageItem(current, previousSender);
+                    },
                   );
+
                 },
               ),
             ),
