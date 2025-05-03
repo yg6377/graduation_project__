@@ -21,7 +21,10 @@ class ChatListScreen extends StatelessWidget {
 
     return Scaffold(
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('chatRooms').snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('chatRooms')
+            .where('participants', arrayContains: me)
+            .snapshots(),
         builder: (ctx, snap) {
           if (!snap.hasData) return Center(child: CircularProgressIndicator());
 
@@ -46,6 +49,7 @@ class ChatListScreen extends StatelessWidget {
 
           final nicknameFutures = <Future<void>>[];
           final nicknameMap = <String, String>{};
+          final profileUrlMap = <String, String>{};
 
           for (var doc in docs) {
             final data = doc.data()! as Map<String, dynamic>;
@@ -60,6 +64,10 @@ class ChatListScreen extends StatelessWidget {
                 nicknameMap[other] = userDoc.exists && userDoc.data()!.containsKey('nickname')
                     ? userDoc['nickname']
                     : 'Unknown';
+                profileUrlMap[other] = userDoc.exists && userDoc.data()!.containsKey('profileImageUrl') // ⭐ 추가
+                    ? userDoc['profileImageUrl']
+                    : '';
+
               }));
             }
           }
@@ -90,7 +98,7 @@ class ChatListScreen extends StatelessWidget {
                   final counts = Map<String, dynamic>.from(raw);
                   final unread = counts[me] as int? ?? 0;
 
-                  final profileUrl = data['profileImageUrl'] as String? ?? "";
+                  final profileUrl = profileUrlMap[otherUid] ?? "";
                   final nick = nicknameMap[otherUid] ?? "Unknown";
 
 
