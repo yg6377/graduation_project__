@@ -214,6 +214,80 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final isMine = data['sender'] == _currentUser?.uid;
     final nickname = isMine ? _myNickname : _otherUserNickname;
     final profileUrl = isMine ? _myProfileUrl : _otherUserProfileUrl;
+    final isSystem = data['sender'] == 'system';
+    if (isSystem) {
+      final type = data['type'] ?? '';
+      final isReviewPrompt = type == 'review_prompt';
+      final isReserved = type == 'reserved'; // <<< 추가
+
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        child: Center(
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.orange[100],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: isReviewPrompt
+                ? Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  'Did you have a good transaction with $_otherUserNickname?',
+                  style: TextStyle(color: Colors.deepOrange[900]),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 6),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ReviewForm(
+                          toUserId: otherUid,
+                          fromUserId: _currentUser!.uid,
+                          fromNickname: _myNickname,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'Leave a review',
+                    style: TextStyle(
+                      decoration: TextDecoration.underline,
+                      color: Colors.deepOrange[900],
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            )
+                : isReserved
+                ? Text(
+              'You have scheduled a transaction with $_otherUserNickname.',
+              style: TextStyle(
+                color: Colors.deepOrange[900],
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            )
+                : Text(
+              data['text'],
+              style: TextStyle(
+                color: Colors.deepOrange[900],
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
+    final type = data['type'] ?? '';
+
+
 
     String time = '';
     if (data['timestamp'] != null) {
@@ -432,8 +506,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                                   final productSaleStatus = productData['saleStatus'] as String? ?? 'selling';
                                   return isOwner
                                       ? DropdownButton<String>(
-                                          value: productSaleStatus,
-                                          items: [
+                                    value: ['selling', 'reserved', 'soldout'].contains(productSaleStatus) ? productSaleStatus : 'selling',
+
+                                    items: [
                                             DropdownMenuItem(value: 'selling', child: Text('Selling')),
                                             DropdownMenuItem(value: 'reserved', child: Text('Reserved')),
                                             DropdownMenuItem(value: 'soldout', child: Text('Sold Out')),
@@ -458,6 +533,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                                                 'text': 'You have scheduled a transaction with $_otherUserNickname.',
                                                 'sender': 'system',
                                                 'timestamp': FieldValue.serverTimestamp(),
+                                                'type': 'reserved',
                                               });
                                             }
                                             if (value == 'soldout') {
