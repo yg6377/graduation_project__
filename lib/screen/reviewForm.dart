@@ -59,7 +59,8 @@ class _ReviewFormState extends State<ReviewForm> {
         .collection('reviews')
         .add({
       'fromUid': widget.fromUserId,
-      'nickname': widget.fromNickname,
+      'nickname': widget.fromNickname,        // 기존 nickname 필드
+      'fromNickname': widget.fromNickname,    // 추가된 fromNickname 필드
       'rating': _rating,
       'comment': comment,
       'timestamp': FieldValue.serverTimestamp(),

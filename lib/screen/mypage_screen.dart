@@ -179,8 +179,11 @@ class _MyPageScreenState extends State<MyPageScreen> {
                                           MaterialPageRoute(builder: (context) => EditProfileScreen()),
                                         );
                                         if (result == true) {
+                                          final user = FirebaseAuth.instance.currentUser;
+                                          final userDoc = await FirebaseFirestore.instance.collection('users').doc(user?.uid).get();
                                           setState(() {
-                                            _nicknameController.text = FirebaseAuth.instance.currentUser?.displayName ?? '';
+                                            _nicknameController.text = user?.displayName ?? '';
+                                            _currentUser?.updatePhotoURL(user?.photoURL);
                                           });
                                         }
                                       },

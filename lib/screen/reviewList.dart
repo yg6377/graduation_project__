@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ReviewList extends StatelessWidget {
   final String userId;
@@ -30,7 +31,10 @@ class ReviewList extends StatelessWidget {
           itemCount: reviews.length,
           itemBuilder: (context, index) {
             final review = reviews[index].data() as Map<String, dynamic>;
-            final reviewer = review['nickname'] ?? 'Unknown';
+            final currentUserNickname = FirebaseAuth.instance.currentUser?.displayName ?? '';
+            final reviewer = review['nickname'] != currentUserNickname
+                ? review['nickname']
+                : review['fromNickname'] ?? 'Unknown';
             final comment = review['comment'] ?? '';
             final rating = review['rating']?.toDouble() ?? 0.0;
             final timestamp = (review['timestamp'] as Timestamp?)?.toDate();
