@@ -5,11 +5,85 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'recommendation_service.dart';
 
+Widget buildProductCard(BuildContext context, DocumentSnapshot doc, Future<void> Function() reloadProducts) {
+  final data = doc.data() as Map<String, dynamic>;
+  final title = data['title'] ?? '';
+  final condition = data['condition'] ?? '';
+  final price = data['price'].toString();
+  final List<dynamic>? imageUrls = data['imageUrls'];
+  final String imageUrl = (imageUrls != null && imageUrls.isNotEmpty)
+      ? imageUrls.first.toString()
+      : (data['imageUrl'] ?? 'assets/images/huanhuan_no_image.png').toString();
+  final Map<String, dynamic> regionMap =
+      (data['region'] is Map<String, dynamic>)
+          ? data['region'] as Map<String, dynamic>
+          : (data['region'] is String)
+              ? {'city': data['region'], 'district': ''}
+              : {};
+  final saleStatus = data['saleStatus'] ?? '';
+  final productId = doc.id;
+  final description = data['description'] ?? '';
+  final sellerEmail = data['sellerEmail'] ?? '';
+  final sellerUid = data['sellerUid'] ?? '';
+  final timestampValue = data['timestamp'];
+  final String timestampString = (timestampValue is Timestamp) ? timestampValue.toDate().toString() : '';
+  final int likeCount = (data['likes'] ?? 0) is int ? data['likes'] : 0;
+  final int chatCount = (data['chats'] ?? 0) is int ? data['chats'] : 0;
+
+  return ProductCard(
+    title: title,
+    imageUrl: imageUrl,
+    price: price,
+    region: regionMap,
+    saleStatus: saleStatus,
+    condition: condition,
+    likeCount: likeCount,
+    chatCount: chatCount,
+    onTap: () async {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('clickedProducts')
+            .doc(productId)
+            .set({'clickedAt': Timestamp.now()});
+      }
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProductDetailScreen(
+            productId: productId,
+            title: title,
+            price: price,
+            description: description,
+            imageUrl: imageUrl,
+            imageUrls: imageUrls?.cast<String>(),
+            timestamp: timestampString,
+            sellerEmail: sellerEmail,
+            chatRoomId: '',
+            userName: sellerEmail,
+            sellerUid: sellerUid,
+            productTitle: title,
+            productImageUrl: imageUrl,
+            productPrice: price,
+            region: regionMap,
+          ),
+        ),
+      );
+
+      await reloadProducts();
+    },
+  );
+}
+
+
 class ProductCard extends StatelessWidget {
   final String title;
   final String imageUrl;
   final String price;
-  final String region;
+  final Map<String, dynamic> region;
   final String saleStatus;
   final String condition;
   final int likeCount;
@@ -128,7 +202,9 @@ class ProductCard extends StatelessWidget {
                       Icon(Icons.place, size: 14, color: Colors.grey),
                       SizedBox(width: 4),
                       Text(
-                        region,
+                        region.isNotEmpty
+                            ? '${region['city'] ?? ''}, ${region['district'] ?? ''}'
+                            : '지역 정보 없음',
                         style: TextStyle(color: Colors.grey[600], fontSize: 13),
                       ),
                     ],
@@ -256,18 +332,31 @@ class _ProductListScreenState extends State<ProductListScreen> {
     print('📦 특정 지역 상품 로딩 시작: $region');
     setState(() => _isLoading = true);
     try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final userDistrict = userDoc.data()?['region']?['district'];
+
+      if (userDistrict == null) {
+        print('❗ 사용자 지역 정보 없음');
+        setState(() => _isLoading = false);
+        return;
+      }
+
       final snap = await FirebaseFirestore.instance
           .collection('products')
-          .where('region', isEqualTo: region)
+          .where('region.district', isEqualTo: userDistrict)
           .orderBy('updatedAt', descending: true)
           .get();
-      print('📦 $region 지역 상품 로드 완료: ${snap.docs.length}개');
+
+      print('📦 $userDistrict 지역 상품 로드 완료: ${snap.docs.length}개');
       setState(() {
         _products = snap.docs;
         _isLoading = false;
       });
     } catch (e) {
-      print('🔥 $region 지역 상품 로딩 중 오류 발생: $e');
+      print('🔥 지역 기반 상품 로딩 중 오류 발생: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -349,7 +438,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
     }
 
     final recommended = scoredProducts.map((e) => e['doc'] as DocumentSnapshot).toList();
-
     print('📊 점수 기반 추천 상품 ${recommended.length}개 로드 완료');
     return recommended;
   }
@@ -400,145 +488,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 padding: const EdgeInsets.all(12.0),
                 child: Text('For you', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
-              ...filteredRecommended.map((doc) {
-                final data = doc.data() as Map<String, dynamic>;
-                final title = data['title'] ?? '';
-                final condition = data['condition'] ?? '';
-                final price = data['price'].toString();
-                final List<dynamic>? imageUrls = data['imageUrls'];
-                final String imageUrl =
-                    (imageUrls != null && imageUrls.isNotEmpty)
-                        ? imageUrls.first.toString()
-                        : (data['imageUrl'] ?? 'assets/images/huanhuan_no_image.png').toString();
-                final region = data['region'] ?? 'Unknown';
-                final saleStatus = data['saleStatus'] ?? '';
-                final productId = doc.id;
-                final description = data['description'] ?? '';
-                final sellerEmail = data['sellerEmail'] ?? '';
-                final sellerUid = data['sellerUid'] ?? '';
-                final timestampValue = data['timestamp'];
-                final String timestampString = (timestampValue is Timestamp)
-                    ? timestampValue.toDate().toString()
-                    : '';
-                final int likeCount = (data['likes'] ?? 0) is int ? data['likes'] : 0;
-                final int chatCount = (data['chats'] ?? 0) is int ? data['chats'] : 0;
-
-                return ProductCard(
-                  title: title,
-                  imageUrl: imageUrl,
-                  price: price,
-                  region: region,
-                  saleStatus: saleStatus,
-                  condition: condition,
-                  likeCount: likeCount,
-                  chatCount: chatCount,
-                  onTap: () async {
-                    final user = FirebaseAuth.instance.currentUser;
-                    if (user != null) {
-                      await FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(user.uid)
-                          .collection('clickedProducts')
-                          .doc(productId)
-                          .set({'clickedAt': Timestamp.now()});
-                    }
-
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ProductDetailScreen(
-                          productId: productId,
-                          title: title,
-                          price: price,
-                          description: description,
-                          imageUrl: imageUrl,
-                          imageUrls: imageUrls?.cast<String>(), // ensure correct type
-                          timestamp: timestampString,
-                          sellerEmail: sellerEmail,
-                          chatRoomId: '',
-                          userName: sellerEmail,
-                          sellerUid: sellerUid,
-                          productTitle: title,
-                          productImageUrl: imageUrl,
-                          productPrice: price,
-                        ),
-                      ),
-                    );
-                    await _loadRegionProducts();
-                  },
-                );
-              }).toList(),
+              ...filteredRecommended.map((doc) => buildProductCard(context, doc, _loadRegionProducts)).toList(),
             ],
-            ...List.generate(filteredProducts.length, (index) {
-              final product = filteredProducts[index];
-              final productData = product.data() as Map<String, dynamic>;
-
-              final timestampValue = productData['timestamp'];
-              final String timestampString = (timestampValue is Timestamp)
-                  ? timestampValue.toDate().toString()
-                  : '';
-
-              final String productId = productData['productId'] ?? product.id;
-              final String title = productData['title'] ?? '';
-              final String condition = productData['condition'] ?? '';
-              final String price = productData['price'].toString();
-              final List<dynamic>? imageUrls = productData['imageUrls'];
-              final String imageUrl =
-                  (imageUrls != null && imageUrls.isNotEmpty)
-                      ? imageUrls.first.toString()
-                      : (productData['imageUrl'] ?? 'assets/images/huanhuan_no_image.png').toString();
-              final String description = productData['description'] ?? '';
-              final String sellerEmail = productData['sellerEmail'] ?? '';
-              final String sellerUid = productData['sellerUid'] ?? '';
-              final String region = productData['region'] ?? 'Unknown';
-              final String saleStatus = productData['saleStatus'] ?? '';
-              final int likeCount = (productData['likes'] ?? 0) is int ? productData['likes'] : 0;
-              final int chatCount = (productData['chats'] ?? 0) is int ? productData['chats'] : 0;
-
-              return ProductCard(
-                title: title,
-                imageUrl: imageUrl,
-                price: price,
-                region: region,
-                saleStatus: saleStatus,
-                condition: condition,
-                likeCount: likeCount,
-                chatCount: chatCount,
-                onTap: () async {
-                  final user = FirebaseAuth.instance.currentUser;
-                  if (user != null) {
-                    await FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(user.uid)
-                        .collection('clickedProducts')
-                        .doc(productId)
-                        .set({'clickedAt': Timestamp.now()});
-                  }
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProductDetailScreen(
-                        productId: productId,
-                        title: title,
-                        price: price,
-                        description: description,
-                        imageUrl: imageUrl,
-                        imageUrls: imageUrls?.cast<String>(), // ensure correct type
-                        timestamp: timestampString,
-                        sellerEmail: sellerEmail,
-                        chatRoomId: '',
-                        userName: sellerEmail,
-                        sellerUid: sellerUid,
-                        productTitle: title,
-                        productImageUrl: imageUrl,
-                        productPrice: price,
-                      ),
-                    ),
-                  );
-                  await _loadRegionProducts();
-                },
-              );
-            }),
+            ...filteredProducts.map((product) => buildProductCard(context, product, _loadRegionProducts)).toList(),
           ],
         ),
       ),

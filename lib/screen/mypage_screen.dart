@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:graduation_project_1/screen/edit_profile_screen.dart';
 import 'package:graduation_project_1/screen/myposts_screen.dart';
 import 'package:graduation_project_1/screen/favoritelist_screen.dart';
+import 'package:graduation_project_1/screen/ChangeRegionScreen.dart';
 
 class MyPageScreen extends StatefulWidget {
 
@@ -136,13 +137,32 @@ class _MyPageScreenState extends State<MyPageScreen> {
                                 future: FirebaseFirestore.instance.collection('users').doc(_currentUser?.uid).get(),
                                 builder: (context, snapshot) {
                                   if (snapshot.connectionState == ConnectionState.waiting) {
-                                    return Text("Your Location: ...", style: TextStyle(fontSize: 14, color: Colors.blueGrey));
+                                    return Row(
+                                      children: [
+                                        Icon(Icons.location_on, color: Colors.blueGrey, size: 16),
+                                        SizedBox(width: 4),
+                                        Text("...", style: TextStyle(fontSize: 14, color: Colors.blueGrey)),
+                                      ],
+                                    );
                                   }
+                                  String regionText = "Unknown";
                                   if (snapshot.hasData && snapshot.data!.exists) {
                                     final region = snapshot.data!.get('region');
-                                    return Text("Your Location: $region", style: TextStyle(fontSize: 14, color: Colors.blueGrey));
+                                    if (region is Map<String, dynamic>) {
+                                      final city = (region['city'] ?? '').toString().replaceAll(' City', '');
+                                      final district = (region['district'] ?? '').toString().replaceAll(' District', '');
+                                      regionText = '$city, $district';
+                                    } else {
+                                      regionText = region.toString();
+                                    }
                                   }
-                                  return Text("Your Location: Unknown", style: TextStyle(fontSize: 14, color: Colors.blueGrey));
+                                  return Row(
+                                    children: [
+                                      Icon(Icons.location_on, color: Colors.blueGrey, size: 16),
+                                      SizedBox(width: 4),
+                                      Text(regionText, style: TextStyle(fontSize: 14, color: Colors.blueGrey)),
+                                    ],
+                                  );
                                 },
                               ),
                               SizedBox(height: 18),

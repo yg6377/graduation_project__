@@ -54,7 +54,7 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
       // Handle default values for title, price, description
       final user = FirebaseAuth.instance.currentUser; // Save seller UID
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(user?.uid).get();
-      final String region = (userDoc.data()?['region'] ?? 'Unknown').toString().trim();
+      final regionMap = userDoc.data()?['region'] as Map<String, dynamic>? ?? {};
 
       String title = titleController.text.isEmpty ? "No title" : titleController.text;
       String price = priceController.text.isEmpty ? "Price unknown" : "${priceController.text} ";
@@ -86,7 +86,10 @@ class _ProductUploadScreenState extends State<ProductUploadScreen> {
         'updatedAt': FieldValue.serverTimestamp(), // Added for bump logic
         'sellerUid': user?.uid,
         'condition': selectedCondition,
-        'region': region,
+        'region': {
+          'city': regionMap['city'] ?? '',
+          'district': regionMap['district'] ?? '',
+        },
         'saleStatus': 'selling',
       });
 
