@@ -12,7 +12,6 @@ import 'screen/signup_screen.dart';
 import 'screen/home_screen.dart';
 import 'screen/search_screen.dart';
 import 'screen/notification_center.dart';
-import 'testMapApi.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 final FlutterLocalNotificationsPlugin localNotifications = FlutterLocalNotificationsPlugin();
@@ -143,7 +142,6 @@ class MyApp extends StatelessWidget {
         '/home': (_) => const HomeScreen(),
         '/search': (_) => const SearchScreen(),
         '/notification': (_) => const NotificationCenterScreen(),
-        '/maptest': (_) => const MapTestScreen(), //map api 테스트중
       },
       debugShowCheckedModeBanner: false,
     );
