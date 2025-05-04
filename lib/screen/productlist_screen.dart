@@ -332,18 +332,31 @@ class _ProductListScreenState extends State<ProductListScreen> {
     print('📦 특정 지역 상품 로딩 시작: $region');
     setState(() => _isLoading = true);
     try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final userDistrict = userDoc.data()?['region']?['district'];
+
+      if (userDistrict == null) {
+        print('❗ 사용자 지역 정보 없음');
+        setState(() => _isLoading = false);
+        return;
+      }
+
       final snap = await FirebaseFirestore.instance
           .collection('products')
-          .where('region', isEqualTo: region)
+          .where('region.district', isEqualTo: userDistrict)
           .orderBy('updatedAt', descending: true)
           .get();
-      print('📦 $region 지역 상품 로드 완료: ${snap.docs.length}개');
+
+      print('📦 $userDistrict 지역 상품 로드 완료: ${snap.docs.length}개');
       setState(() {
         _products = snap.docs;
         _isLoading = false;
       });
     } catch (e) {
-      print('🔥 $region 지역 상품 로딩 중 오류 발생: $e');
+      print('🔥 지역 기반 상품 로딩 중 오류 발생: $e');
       setState(() => _isLoading = false);
     }
   }

@@ -85,14 +85,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         // no update to 'region' as it's managed separately
       });
 
-      if (_savedRegion != null) {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .get();
+
+      final regionData = userDoc.data()?['region'];
+      if (regionData is Map<String, dynamic>) {
         final userProducts = await FirebaseFirestore.instance
             .collection('products')
             .where('sellerUid', isEqualTo: _currentUser!.uid)
             .get();
 
         for (final doc in userProducts.docs) {
-          await doc.reference.update({'region': _savedRegion});
+          await doc.reference.update({'region': regionData});
         }
       }
 

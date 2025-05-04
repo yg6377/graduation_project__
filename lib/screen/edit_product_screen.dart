@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 
 class EditScreen extends StatefulWidget {
@@ -37,6 +38,7 @@ class _EditScreenState extends State<EditScreen> {
   String _selectedSaleStatus = 'available';
   List<String> _imageUrls = [];
   final ImagePicker _picker = ImagePicker();
+  Set<String> _uploadingImages = {};
 
   @override
   void initState() {
@@ -49,12 +51,48 @@ class _EditScreenState extends State<EditScreen> {
     _imageUrls = widget.imageUrls ?? [widget.imageUrl];
   }
 
+  Widget _buildSafeFileImage(String path) {
+    final file = File(path);
+    if (file.existsSync()) {
+      return Image.file(file, width: 100, height: 100, fit: BoxFit.cover);
+    } else {
+      return Image.asset('assets/images/huanhuan_no_image.png', width: 100, height: 100, fit: BoxFit.cover);
+    }
+  }
+
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
+      final tempId = DateTime.now().millisecondsSinceEpoch.toString();
       setState(() {
-        _imageUrls.add(pickedFile.path); // Will be uploaded later if needed
+        _uploadingImages.add(tempId);
+        _imageUrls.add(tempId);
       });
+
+      final file = File(pickedFile.path);
+      final fileName = 'product_images/$tempId';
+      final ref = FirebaseStorage.instance.ref().child(fileName);
+
+      try {
+        final uploadTask = await ref.putFile(file);
+        final downloadUrl = await uploadTask.ref.getDownloadURL();
+
+        setState(() {
+          final index = _imageUrls.indexOf(tempId);
+          if (index != -1) {
+            _imageUrls[index] = downloadUrl;
+          }
+          _uploadingImages.remove(tempId);
+        });
+      } catch (e) {
+        setState(() {
+          _imageUrls.remove(tempId);
+          _uploadingImages.remove(tempId);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload image: $e')),
+        );
+      }
     }
   }
 
@@ -71,6 +109,7 @@ class _EditScreenState extends State<EditScreen> {
         'price': _editedPrice,
         'condition': _selectedCondition,
         'saleStatus': _selectedSaleStatus,
+        'imageUrl': _imageUrls.isNotEmpty ? _imageUrls.first : '',
         'imageUrls': _imageUrls,
       });
 
@@ -115,7 +154,16 @@ class _EditScreenState extends State<EditScreen> {
                           children: [
                             Container(
                               margin: EdgeInsets.only(right: 8),
-                              child: Image.network(_imageUrls[index], width: 100, height: 100, fit: BoxFit.cover),
+                              child: _uploadingImages.contains(_imageUrls[index])
+                                  ? Container(
+                                      width: 100,
+                                      height: 100,
+                                      color: Colors.grey[300],
+                                      child: Center(child: CircularProgressIndicator()),
+                                    )
+                                  : _imageUrls[index].startsWith('http')
+                                      ? Image.network(_imageUrls[index], width: 100, height: 100, fit: BoxFit.cover)
+                                      : _buildSafeFileImage(_imageUrls[index]),
                             ),
                             Positioned(
                               top: 0,
