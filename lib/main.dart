@@ -6,6 +6,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:another_flushbar/flushbar.dart';
+import 'package:graduation_project_1/screen/ChangeRegionScreen.dart';
 import 'firebase_options.dart';
 import 'screen/login_screen.dart';
 import 'screen/signup_screen.dart';
@@ -142,6 +143,7 @@ class MyApp extends StatelessWidget {
         '/home': (_) => const HomeScreen(),
         '/search': (_) => const SearchScreen(),
         '/notification': (_) => const NotificationCenterScreen(),
+        '/changeRegion': (_) => const ChangeRegionScreen(),
       },
       debugShowCheckedModeBanner: false,
     );

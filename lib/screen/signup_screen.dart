@@ -18,12 +18,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _confirmPasswordController = TextEditingController();
   final TextEditingController _regionController = TextEditingController();
 
-  final List<String> _regions = [
-    'Danshui', 'Taipei', 'New Taipei', 'Kaohsiung', 'Taichung',
-    'Tainan', 'Hualien', 'Keelung', 'Taoyuan', 'Hsinchu',
-  ];
-  String? _selectedRegion;
-
   // 회원가입 기능
   Future<void> signUp() async {
     if (_passwordController.text != _confirmPasswordController.text) {
@@ -52,7 +46,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       await FirebaseFirestore.instance.collection('users').doc(credential.user!.uid).set({
         'email': _emailController.text,
         'nickname': 'User${Random().nextInt(100000)}',
-        'region': _regionController.text,
+        'region': '',
         'userId': credential.user!.uid,
         'createdAt': FieldValue.serverTimestamp(),
       });
@@ -123,36 +117,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 decoration: BoxDecoration(
                   color: CupertinoColors.white,
                   borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              SizedBox(height: 16),
-              CupertinoButton(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                color: CupertinoColors.white,
-                borderRadius: BorderRadius.circular(8),
-                onPressed: () async {
-                  final selectedRegion = await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => ChangeRegionScreen()),
-                  );
-                  if (selectedRegion is String) {
-                    setState(() {
-                      _selectedRegion = selectedRegion;
-                      _regionController.text = selectedRegion;
-                    });
-                  }
-                },
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    _selectedRegion ?? 'Verify Region',
-                    style: TextStyle(
-                      color: _selectedRegion == null
-                          ? CupertinoColors.activeBlue
-                          : CupertinoColors.black,
-                      fontSize: 16,
-                    ),
-                  ),
                 ),
               ),
               SizedBox(height: 30),
