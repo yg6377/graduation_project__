@@ -576,11 +576,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                                           'from': _currentUser?.uid,
                                           'to': otherUid,
                                           'nickname': _myNickname,
-                                          'message': '$_myNickname completed a transaction with you. Tap to leave a review!',
+                                          'message': '$_myNickname completed a transaction with you!',
                                           'timestamp': FieldValue.serverTimestamp(),
                                           'read': false,
                                           'chatRoomId': widget.chatRoomId,
                                           'productId': productId,
+                                          'saleStatus': 'soldout', // Optionally include saleStatus for notification navigation
                                         });
                                       }
                                     },

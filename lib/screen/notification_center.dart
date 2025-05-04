@@ -108,15 +108,14 @@ class NotificationCenterScreen extends StatelessWidget {
                       await docRef.update({'read': true});
 
                       if (data['type'] == 'transactionComplete') {
-                        Navigator.push(
+                        Navigator.pushNamed(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => ReviewForm(
-                              toUserId: data['to'],
-                              fromUserId: data['from'],
-                              fromNickname: data['nickname'] ?? 'Someone',
-                            ),
-                          ),
+                          '/chatRoom',
+                          arguments: {
+                            'chatRoomId': data['chatRoomId'],
+                            'userName': data['nickname'] ?? 'User',
+                            'saleStatus': 'soldout',
+                          },
                         );
                       }
                     },

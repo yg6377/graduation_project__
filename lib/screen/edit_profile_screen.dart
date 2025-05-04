@@ -73,6 +73,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             .child('${_currentUser!.uid}.jpg');
         await ref.putFile(_profileImage!);
         imageUrl = await ref.getDownloadURL();
+        if (imageUrl != null) {
+          await _currentUser!.updatePhotoURL(imageUrl);
+        }
       }
 
       // Update Firestore
@@ -119,11 +122,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: Text('Edit Profile'),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Edit Profile'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0.5,
       ),
-      child: SafeArea(
+      body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Column(
@@ -139,22 +145,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           ? NetworkImage(_profileImageUrlFromDB!)
                           : (_currentUser?.photoURL != null
                               ? NetworkImage(_currentUser!.photoURL!)
-                              : AssetImage('assets/default_avatar.png') as ImageProvider)),
+                              : AssetImage('assets/images/default_profile.png') as ImageProvider)),
                 ),
               ),
               SizedBox(height: 24),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Nickname', style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(fontSize: 16)),
+                child: Text('Nickname', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
               ),
               SizedBox(height: 8),
-              CupertinoTextField(
+              TextField(
                 controller: _nicknameController,
-                placeholder: 'Enter new nickname',
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                decoration: BoxDecoration(
-                  color: CupertinoColors.systemGrey6.resolveFrom(context),
-                  borderRadius: BorderRadius.circular(8),
+                decoration: InputDecoration(
+                  hintText: 'Enter new nickname',
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                 ),
               ),
               SizedBox(height: 24),
@@ -165,7 +172,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   children: [
                     Text(
                       'My Region',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                     ),
                     SizedBox(height: 8),
                     Text(
@@ -176,20 +183,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
               ),
               SizedBox(height: 16),
-              CupertinoButton(
-                child: Text('Change Location'),
+              OutlinedButton(
                 onPressed: () {
                   Navigator.push(
                     context,
-                    CupertinoPageRoute(builder: (context) => ChangeRegionScreen()),
+                    MaterialPageRoute(builder: (context) => ChangeRegionScreen()),
                   );
                 },
+                child: Text('Change Location'),
               ),
               SizedBox(height: 32),
-              CupertinoButton(
-                color: Color(0xFF3B82F6),
-                onPressed: _saveProfile,
-                child: Text('Save'),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF3B82F6),
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: _saveProfile,
+                  child: Text('Save'),
+                ),
               ),
             ],
           ),
