@@ -137,7 +137,7 @@ class _ChangeRegionScreenState extends State<ChangeRegionScreen> {
                       'You are currently at:\n'
                       '$_currentAddress\n\n'
                       'Do you want to update your region to this address?'
-                  : '위치를 불러오는 중입니다...',
+                  : 'Loading...',
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16),
             ),
@@ -185,10 +185,8 @@ class _ChangeRegionScreenState extends State<ChangeRegionScreen> {
                         actions: [
                           TextButton(
                             onPressed: () {
-                              Navigator.of(context)
-                                  .pop(); // Close the dialog
-                              Navigator.of(context)
-                                  .pop(); // Pop ChangeRegionScreen
+                              Navigator.of(context).pop(); // Close the dialog
+                              Navigator.of(context).pop(true); // Pop ChangeRegionScreen with result
                             },
                             child: const Text('OK'),
                           ),
