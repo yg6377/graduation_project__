@@ -4,9 +4,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:graduation_project_1/screen/productlist_screen.dart';
 import 'ProductDetailScreen.dart';
 
-class FavoriteListScreen extends StatelessWidget {
+class FavoriteListScreen extends StatefulWidget {
   const FavoriteListScreen({super.key});
 
+  @override
+  _FavoriteListScreenState createState() => _FavoriteListScreenState();
+}
+
+class _FavoriteListScreenState extends State<FavoriteListScreen> {
   Future<List<DocumentSnapshot>> _fetchFavoriteProducts() async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return [];
@@ -84,8 +89,8 @@ class FavoriteListScreen extends StatelessWidget {
                   condition: condition,
                   chatCount: (data['chats'] ?? 0) is int ? data['chats'] : 0,
                   likeCount: (data['likes'] ?? 0) is int ? data['likes'] : 0,
-                  onTap: () {
-                    Navigator.push(
+                  onTap: () async {
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => ProductDetailScreen(
@@ -109,6 +114,7 @@ class FavoriteListScreen extends StatelessWidget {
                         ),
                       ),
                     );
+                    setState(() {});
                   },
                 ),
               );

@@ -163,6 +163,20 @@ class _ChangeRegionScreenState extends State<ChangeRegionScreen> {
                       },
                     });
 
+                    final userProducts = await FirebaseFirestore.instance
+                        .collection('products')
+                        .where('sellerUid', isEqualTo: currentUser.uid)
+                        .get();
+
+                    for (final doc in userProducts.docs) {
+                      await doc.reference.update({
+                        'region': {
+                          'city': city,
+                          'district': district,
+                        },
+                      });
+                    }
+
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(

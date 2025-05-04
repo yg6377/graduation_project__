@@ -46,11 +46,10 @@ class MyPostsScreen extends StatelessWidget {
               final imageUrl = (imageUrls != null && imageUrls.isNotEmpty)
                   ? imageUrls.first.toString()
                   : ((data['imageUrl'] ?? '').toString().isNotEmpty
-                      ? data['imageUrl']
-                      : 'assets/images/huanhuan_no_image.png');
+                  ? data['imageUrl']
+                  : 'assets/images/huanhuan_no_image.png');
               final price = data['price']?.toString() ?? '';
               final nickname = data['userName'] ?? '';
-              // Safely parse region field which may be a Map or a String
               final dynamic regionField = data['region'];
               Map<String, dynamic> region;
               if (regionField is Map<String, dynamic>) {
@@ -86,91 +85,104 @@ class MyPostsScreen extends StatelessWidget {
                 final durationSinceUpdate = DateTime.now().difference(updatedAt);
                 showBump = durationSinceUpdate.inHours >= 24;
               }
-              return Stack(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ProductDetailScreen(
-                            productId: posts[index].id,
-                            title: displayTitle,
-                            price: price,
-                            description: data['description'] ?? '',
-                            imageUrl: imageUrl,
-                            timestamp: formattedTime,
-                            sellerUid: data['sellerUid'] ?? '',
-                            sellerEmail: data['sellerUid'] ?? '',
-                            chatRoomId: '',
-                            userName: nickname,
-                            productTitle: title,
-                            productImageUrl: (data['imageUrls'] != null && data['imageUrls'].isNotEmpty)
-                                ? data['imageUrls'].first.toString()
-                                : ((data['imageUrl'] ?? '').toString().isNotEmpty
-                                    ? data['imageUrl']
-                                    : 'assets/images/huanhuan_no_image.png'),
-                            productPrice: price,
-                            region: region,
-                          ),
-                        ),
-                      );
-                    },
-                    child: ProductCard(
-                      title: displayTitle,
-                      imageUrl: imageUrl,
-                      price: price,
-                      region: region,
-                      saleStatus: saleStatus,
-                      condition: condition,
-                      chatCount: (data['chats'] ?? 0) is int ? data['chats'] : 0,
-                      likeCount: (data['likes'] ?? 0) is int ? data['likes'] : 0,
-                    ),
-                  ),
-                  if (showBump)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: GestureDetector(
-                        onTap: () async {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: Text('Do you want to bump this post to the top?'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, false),
-                                  child: Text('No'),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, true),
-                                  child: Text('Yes'),
-                                ),
-                              ],
+
+              return FutureBuilder<QuerySnapshot>(
+                future: FirebaseFirestore.instance
+                    .collection('products')
+                    .doc(posts[index].id)
+                    .collection('likes')
+                    .get(),
+                builder: (context, likeSnapshot) {
+                  final likeCount = likeSnapshot.hasData ? likeSnapshot.data!.docs.length : 0;
+
+                  return Stack(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ProductDetailScreen(
+                                productId: posts[index].id,
+                                title: displayTitle,
+                                price: price,
+                                description: data['description'] ?? '',
+                                imageUrl: imageUrl,
+                                timestamp: formattedTime,
+                                sellerUid: data['sellerUid'] ?? '',
+                                sellerEmail: data['sellerUid'] ?? '',
+                                chatRoomId: '',
+                                userName: nickname,
+                                productTitle: title,
+                                productImageUrl: (data['imageUrls'] != null && data['imageUrls'].isNotEmpty)
+                                    ? data['imageUrls'].first.toString()
+                                    : ((data['imageUrl'] ?? '').toString().isNotEmpty
+                                        ? data['imageUrl']
+                                        : 'assets/images/huanhuan_no_image.png'),
+                                productPrice: price,
+                                region: region,
+                                imageUrls: List<String>.from(data['imageUrls'] ?? []),
+                              ),
                             ),
                           );
-                          if (confirm == true) {
-                            await FirebaseFirestore.instance
-                                .collection('products')
-                                .doc(posts[index].id)
-                                .update({'updatedAt': FieldValue.serverTimestamp()});
-                          }
                         },
-                        child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border.all(color: Colors.blue),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'Bump',
-                            style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
-                          ),
+                        child: ProductCard(
+                          title: displayTitle,
+                          imageUrl: imageUrl,
+                          price: price,
+                          region: region,
+                          saleStatus: saleStatus,
+                          condition: condition,
+                          chatCount: (data['chats'] ?? 0) is int ? data['chats'] : 0,
+                          likeCount: likeCount,
                         ),
                       ),
-                    ),
-                ],
+                      if (showBump)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: GestureDetector(
+                            onTap: () async {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: Text('Do you want to bump this post to the top?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, false),
+                                      child: Text('No'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      child: Text('Yes'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirm == true) {
+                                await FirebaseFirestore.instance
+                                    .collection('products')
+                                    .doc(posts[index].id)
+                                    .update({'updatedAt': FieldValue.serverTimestamp()});
+                              }
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                border: Border.all(color: Colors.blue),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Bump',
+                                style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               );
             },
           );
