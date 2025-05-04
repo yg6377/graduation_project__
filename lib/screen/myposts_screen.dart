@@ -112,6 +112,7 @@ class MyPostsScreen extends StatelessWidget {
                                     : 'assets/images/huanhuan_no_image.png'),
                             productPrice: price,
                             region: region,
+                            imageUrls: List<String>.from(data['imageUrls'] ?? []),
                           ),
                         ),
                       );

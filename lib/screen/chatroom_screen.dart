@@ -488,26 +488,26 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       borderRadius: BorderRadius.circular(6),
                       child: img.isNotEmpty
                           ? FadeInImage.assetNetwork(
-                              placeholder: 'assets/images/huanhuan_no_image.png',
-                              image: img,
-                              width: 50,
-                              height: 50,
-                              fit: BoxFit.cover,
-                              imageErrorBuilder: (context, error, stackTrace) {
-                                return Image.asset(
-                                  'assets/images/huanhuan_no_image.png',
-                                  width: 50,
-                                  height: 50,
-                                  fit: BoxFit.cover,
-                                );
-                              },
-                            )
+                        placeholder: 'assets/images/huanhuan_no_image.png',
+                        image: img,
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                        imageErrorBuilder: (context, error, stackTrace) {
+                          return Image.asset(
+                            'assets/images/huanhuan_no_image.png',
+                            width: 50,
+                            height: 50,
+                            fit: BoxFit.cover,
+                          );
+                        },
+                      )
                           : Image.asset(
-                              'assets/images/huanhuan_no_image.png',
-                              width: 50,
-                              height: 50,
-                              fit: BoxFit.cover,
-                            ),
+                        'assets/images/huanhuan_no_image.png',
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                     SizedBox(width: 8),
                     Expanded(
@@ -529,78 +529,78 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                                     value: ['selling', 'reserved', 'soldout'].contains(productSaleStatus) ? productSaleStatus : 'selling',
 
                                     items: [
-                                            DropdownMenuItem(value: 'selling', child: Text('Selling')),
-                                            DropdownMenuItem(value: 'reserved', child: Text('Reserved')),
-                                            DropdownMenuItem(value: 'soldout', child: Text('Sold Out')),
-                                          ],
-                                          onChanged: (value) async {
-                                            if (value == null || value == productSaleStatus) return;
-                                            final chatRef = FirebaseFirestore.instance
-                                                .collection('chatRooms')
-                                                .doc(widget.chatRoomId);
-                                            await chatRef.update({'saleStatus': value});
-                                            if (productId.isNotEmpty) {
-                                              await FirebaseFirestore.instance
-                                                  .collection('products')
-                                                  .doc(productId)
-                                                  .update({'saleStatus': value});
-                                            }
-                                            setState(() {
-                                              _saleStatus = value;
-                                            });
-                                            if (value == 'reserved') {
-                                              await chatRef.collection('message').add({
-                                                'text': 'You have scheduled a transaction with $_otherUserNickname.',
-                                                'sender': 'system',
-                                                'timestamp': FieldValue.serverTimestamp(),
-                                                'type': 'reserved',
-                                              });
-                                            }
-                                            if (value == 'soldout') {
-                                              final reviewPrompt = 'Did you have a good transaction with $_otherUserNickname? Leave a review. [Review]';
-                                              await chatRef.collection('message').add({
-                                                'text': reviewPrompt,
-                                                'sender': 'system',
-                                                'timestamp': FieldValue.serverTimestamp(),
-                                                'type': 'review_prompt',
-                                              });
-                                              await FirebaseFirestore.instance
-                                                  .collection('users')
-                                                  .doc(otherUid)
-                                                  .collection('notifications')
-                                                  .add({
-                                                'type': 'transactionComplete',
-                                                'from': _currentUser?.uid,
-                                                'to': otherUid,
-                                                'nickname': _myNickname,
-                                                'message': '$_myNickname completed a transaction with you. Tap to leave a review!',
-                                                'timestamp': FieldValue.serverTimestamp(),
-                                                'read': false,
-                                                'chatRoomId': widget.chatRoomId,
-                                                'productId': productId,
-                                              });
-                                            }
-                                          },
-                                        )
+                                      DropdownMenuItem(value: 'selling', child: Text('Selling')),
+                                      DropdownMenuItem(value: 'reserved', child: Text('Reserved')),
+                                      DropdownMenuItem(value: 'soldout', child: Text('Sold Out')),
+                                    ],
+                                    onChanged: (value) async {
+                                      if (value == null || value == productSaleStatus) return;
+                                      final chatRef = FirebaseFirestore.instance
+                                          .collection('chatRooms')
+                                          .doc(widget.chatRoomId);
+                                      await chatRef.update({'saleStatus': value});
+                                      if (productId.isNotEmpty) {
+                                        await FirebaseFirestore.instance
+                                            .collection('products')
+                                            .doc(productId)
+                                            .update({'saleStatus': value});
+                                      }
+                                      setState(() {
+                                        _saleStatus = value;
+                                      });
+                                      if (value == 'reserved') {
+                                        await chatRef.collection('message').add({
+                                          'text': 'You have scheduled a transaction with $_otherUserNickname.',
+                                          'sender': 'system',
+                                          'timestamp': FieldValue.serverTimestamp(),
+                                          'type': 'reserved',
+                                        });
+                                      }
+                                      if (value == 'soldout') {
+                                        final reviewPrompt = 'Did you have a good transaction with $_otherUserNickname? Leave a review. [Review]';
+                                        await chatRef.collection('message').add({
+                                          'text': reviewPrompt,
+                                          'sender': 'system',
+                                          'timestamp': FieldValue.serverTimestamp(),
+                                          'type': 'review_prompt',
+                                        });
+                                        await FirebaseFirestore.instance
+                                            .collection('users')
+                                            .doc(otherUid)
+                                            .collection('notifications')
+                                            .add({
+                                          'type': 'transactionComplete',
+                                          'from': _currentUser?.uid,
+                                          'to': otherUid,
+                                          'nickname': _myNickname,
+                                          'message': '$_myNickname completed a transaction with you. Tap to leave a review!',
+                                          'timestamp': FieldValue.serverTimestamp(),
+                                          'read': false,
+                                          'chatRoomId': widget.chatRoomId,
+                                          'productId': productId,
+                                        });
+                                      }
+                                    },
+                                  )
                                       : Container(
-                                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: productSaleStatus == 'soldout'
-                                                ? Colors.grey
-                                                : productSaleStatus == 'reserved'
-                                                    ? Colors.lightBlueAccent
-                                                    : Colors.green,
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            productSaleStatus.toUpperCase(),
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        );
+                                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: productSaleStatus == 'soldout'
+                                          ? Colors.grey
+                                          : productSaleStatus == 'reserved'
+                                          ? Colors.lightBlueAccent
+                                          : Colors.green,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      productSaleStatus.toUpperCase(),
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  );
                                 },
                               ),
                               SizedBox(width: 8),
@@ -707,11 +707,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     return Center(child: CircularProgressIndicator());
                   }
                   final messages = snap.data!.docs;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (_scrollController.hasClients) {
-    _scrollController.jumpTo(0);
-    }
-    });
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (_scrollController.hasClients) {
+                      _scrollController.jumpTo(0);
+                    }
+                  });
                   if (messages.isEmpty) {
                     return Center(child: Text('No messages yet.'));
                   }
@@ -737,43 +737,43 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               padding: EdgeInsets.all(8),
               child: _otherUserLeft
                   ? Container(
-                      width: double.infinity,
-                      margin: EdgeInsets.symmetric(vertical: 8),
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red[50],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.red),
+                width: double.infinity,
+                margin: EdgeInsets.symmetric(vertical: 8),
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.red),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'You cannot send a message because the other user has left the chat.',
+                        style: TextStyle(color: Colors.red[800], fontWeight: FontWeight.w500),
                       ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info, color: Colors.red),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'You cannot send a message because the other user has left the chat.',
-                              style: TextStyle(color: Colors.red[800], fontWeight: FontWeight.w500),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _messageController,
-                            decoration: InputDecoration(
-                              hintText: 'Enter your message...',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            onSubmitted: (_) => _sendMessage(),
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        IconButton(icon: Icon(Icons.send, color: Colors.blue), onPressed: _sendMessage),
-                      ],
                     ),
+                  ],
+                ),
+              )
+                  : Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter your message...',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onSubmitted: (_) => _sendMessage(),
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  IconButton(icon: Icon(Icons.send, color: Colors.blue), onPressed: _sendMessage),
+                ],
+              ),
             ),
           ],
         ),
