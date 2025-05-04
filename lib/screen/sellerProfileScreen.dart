@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:graduation_project_1/screen/reviewList.dart';
 
 class SellerProfileScreen extends StatelessWidget {
   final String sellerUid;
@@ -20,7 +21,10 @@ class SellerProfileScreen extends StatelessWidget {
           final userData = snapshot.data!.data() as Map<String, dynamic>;
           final nickname = userData['nickname'] ?? '닉네임 없음';
           final profileImageUrl = userData['profileImageUrl'] ?? '';
-          final region = userData['region'] ?? '지역 미설정';
+          final regionMap = userData['region'] as Map<String, dynamic>?;
+          final city = regionMap?['city']?.replaceAll(' City', '') ?? '';
+          final district = regionMap?['district']?.replaceAll(' District', '') ?? '';
+          final region = '$city $district'.trim().isNotEmpty ? '$city $district' : '지역 미설정';
 
           return Column(
             children: [
@@ -32,7 +36,12 @@ class SellerProfileScreen extends StatelessWidget {
                     : AssetImage('assets/images/default_profile.png') as ImageProvider,
               ),
               SizedBox(height: 12),
-              Text(nickname, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(nickname, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ],
+              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -50,6 +59,7 @@ class SellerProfileScreen extends StatelessWidget {
                   child: Text('He/She selling', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
+              Divider(),
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
                   stream: FirebaseFirestore.instance
@@ -69,12 +79,20 @@ class SellerProfileScreen extends StatelessWidget {
                         final imageUrl = product['imageUrl'] ?? '';
                         final price = product['price']?.toString() ?? '';
 
-                        return ListTile(
-                          leading: imageUrl.isNotEmpty
-                              ? Image.network(imageUrl, width: 50, height: 50, fit: BoxFit.cover)
-                              : Container(width: 50, height: 50, color: Colors.grey),
-                          title: Text(title),
-                          subtitle: Text('$price NTD'),
+                        return Column(
+                          children: [
+                            ListTile(
+                              leading: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: imageUrl.isNotEmpty
+                                    ? Image.network(imageUrl, width: 50, height: 50, fit: BoxFit.cover)
+                                    : Image.asset('assets/images/huanhuan_no_image.png', width: 50, height: 50, fit: BoxFit.cover),
+                              ),
+                              title: Text(title),
+                              subtitle: Text('$price NTD'),
+                            ),
+                            Divider(),
+                          ],
                         );
                       },
                     );
@@ -83,11 +101,14 @@ class SellerProfileScreen extends StatelessWidget {
               ),
               Divider(),
               Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Text('받은 후기 (미구현)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: Text('Received Reviews', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
+              ),
+              Expanded(
+                child: ReviewList(userId: sellerUid),
               ),
             ],
           );

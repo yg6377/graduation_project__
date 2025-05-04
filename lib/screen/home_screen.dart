@@ -38,7 +38,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
     final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    setState(() => _selectedRegion = doc.data()?['region']);
+    final district = doc.data()?['region']?['district'];
+
+    if (district != null) {
+      // " District" 문자열 제거
+      final cleaned = district.replaceAll(' District', '').trim();
+      setState(() => _selectedRegion = cleaned);
+    }
   }
 
   Future<void> _changeRegion(String? region) async {
@@ -85,40 +91,23 @@ class _HomeScreenState extends State<HomeScreen> {
             ? Row(
           children: [
             Expanded(
-              child: GestureDetector(
-                onTap: () async {
-                  final selected = await showDialog<String>(
-                    context: context,
-                    builder: (_) => SimpleDialog(
-                      title: Text('Select Region'),
-                      children: [
-                        for (final r in [
-                          'Danshui', 'Taipei', 'New Taipei',
-                          'Kaohsiung', 'Taichung', 'Tainan',
-                          'Hualien', 'Keelung', 'Taoyuan', 'Hsinchu',
-                        ])
-                          SimpleDialogOption(
-                            onPressed: () => Navigator.pop(context, r),
-                            child: Text(r),
-                          ),
-                      ],
-                    ),
-                  );
-                  await _changeRegion(selected);
-                },
-                child: Row(
-                  children: [
-                    Text(
-                      _selectedRegion ?? '<None>',
-                      style: TextStyle(
-                        color: Color(0xFF3B82F6),
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+              child: Row(
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.location_on, color: Color(0xFF3B82F6), size: 20),
+                      SizedBox(width: 4),
+                      Text(
+                        _selectedRegion ?? '지역 없음',
+                        style: TextStyle(
+                          color: Color(0xFF3B82F6),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    Icon(Icons.arrow_drop_down, color: Color(0xFF3B82F6)),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
             ),
             Text('Available Only',
@@ -174,10 +163,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 );
               },
-            ),
-            IconButton(
-              icon: Icon(Icons.map, color: Color(0xFF3B82F6)),
-              onPressed: () => Navigator.pushNamed(context, '/maptest'),
             ),
           ],
         ],
@@ -256,6 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: Color(0xFF0277BD),
         heroTag: 'uploadProduct',
         onPressed: () => Navigator.push(
           context,

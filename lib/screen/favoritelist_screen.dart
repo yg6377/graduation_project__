@@ -61,12 +61,17 @@ class FavoriteListScreen extends StatelessWidget {
               final title = data['title'] ?? '';
               final displayTitle = title;
               final saleStatus = data['saleStatus'] ?? '';
-              final region = data['region'] ?? '';
               final imageUrl = (data['imageUrls'] != null && data['imageUrls'].isNotEmpty)
                   ? data['imageUrls'].first.toString()
                   : ((data['imageUrl'] ?? '').toString().isNotEmpty
                       ? data['imageUrl']
                       : 'assets/images/huanhuan_no_image.png');
+              final regionRaw = data['region'];
+              final Map<String, dynamic> regionMap = regionRaw is Map<String, dynamic>
+                  ? regionRaw
+                  : (regionRaw is String
+                      ? {'city': regionRaw, 'district': ''}
+                      : <String, dynamic>{});
 
               return Card(
                 margin: EdgeInsets.all(8),
@@ -74,7 +79,7 @@ class FavoriteListScreen extends StatelessWidget {
                   title: displayTitle,
                   imageUrl: imageUrl,
                   price: (data['price'] ?? '').toString(),
-                  region: region,
+                  region: regionMap,
                   saleStatus: saleStatus,
                   condition: condition,
                   chatCount: (data['chats'] ?? 0) is int ? data['chats'] : 0,
@@ -100,6 +105,7 @@ class FavoriteListScreen extends StatelessWidget {
                           imageUrls: (data['imageUrls'] != null)
                               ? List<String>.from(data['imageUrls'])
                               : [],
+                          region: regionMap,
                         ),
                       ),
                     );
