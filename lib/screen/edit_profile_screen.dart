@@ -85,7 +85,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           .update({
         'nickname': newNickname,
         if (imageUrl != null) 'profileImageUrl': imageUrl,
-        // no update to 'region' as it's managed separately
+// no update to 'region' as it's managed separately
       });
 
       final userDoc = await FirebaseFirestore.instance
@@ -110,6 +110,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (imageUrl != null) {
         await _currentUser!.updatePhotoURL(imageUrl);
       }
+
+      // Immediately update local state so UI reflects changes
+      setState(() {
+        _profileImageUrlFromDB = imageUrl ?? _profileImageUrlFromDB;
+        _nicknameController.text = newNickname;
+      });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

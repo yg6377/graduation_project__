@@ -51,6 +51,20 @@ class _MyPageScreenState extends State<MyPageScreen> {
         .snapshots();
   }
 
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    await user?.reload();
+    final updatedUser = FirebaseAuth.instance.currentUser;
+    final doc = await FirebaseFirestore.instance.collection('users').doc(updatedUser!.uid).get();
+    if (doc.exists) {
+      final data = doc.data()!;
+      setState(() {
+        _nicknameController.text = updatedUser.displayName ?? '';
+        updatedUser.updatePhotoURL(data['profileImageUrl']);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -179,12 +193,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
                                           MaterialPageRoute(builder: (context) => EditProfileScreen()),
                                         );
                                         if (result == true) {
-                                          final user = FirebaseAuth.instance.currentUser;
-                                          final userDoc = await FirebaseFirestore.instance.collection('users').doc(user?.uid).get();
-                                          setState(() {
-                                            _nicknameController.text = user?.displayName ?? '';
-                                            _currentUser?.updatePhotoURL(user?.photoURL);
-                                          });
+                                          await _loadUserData();
                                         }
                                       },
                                       child: Text(
@@ -417,4 +426,4 @@ class _MyPageScreenState extends State<MyPageScreen> {
       ),
     );
   }
-}
+  }
