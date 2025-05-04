@@ -106,7 +106,7 @@ class _ChangeRegionScreenState extends State<ChangeRegionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Change Your Region'),
+        title: const Text('Verify Your Location'),
         backgroundColor: Color(0xFF84C1FF),
       ),
       backgroundColor: const Color(0xFFEAF6FF),
@@ -132,11 +132,11 @@ class _ChangeRegionScreenState extends State<ChangeRegionScreen> {
             const SizedBox(height: 24),
             Text(
               _currentAddress.isNotEmpty
-                  ? '현재 계정의 동네\n'
-                  '$_savedAddress\n'
-                  '현재 계신 동네는 \n'
-                  '$_currentAddress \n'
-                  '내 동네를 현재 주소로 변경하시겠습니까?'
+                  ? 'Your current saved location:\n'
+                      '$_savedAddress\n\n'
+                      'You are currently at:\n'
+                      '$_currentAddress\n\n'
+                      'Do you want to update your region to this address?'
                   : '위치를 불러오는 중입니다...',
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16),
@@ -180,8 +180,8 @@ class _ChangeRegionScreenState extends State<ChangeRegionScreen> {
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
-                        title: const Text('동네 변경 완료'),
-                        content: Text('내 동네가 $_currentAddress 로 변경되었습니다!'),
+                        title: const Text('Region Updated'),
+                        content: Text('Your region has been updated to $_currentAddress!'),
                         actions: [
                           TextButton(
                             onPressed: () {
@@ -190,7 +190,7 @@ class _ChangeRegionScreenState extends State<ChangeRegionScreen> {
                               Navigator.of(context)
                                   .pop(); // Pop ChangeRegionScreen
                             },
-                            child: const Text('확인'),
+                            child: const Text('OK'),
                           ),
                         ],
                       ),
@@ -198,7 +198,7 @@ class _ChangeRegionScreenState extends State<ChangeRegionScreen> {
                   }
                 }
               },
-              child: const Text('변경'),
+              child: const Text('Update'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xFF4A90E2),
                 padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),

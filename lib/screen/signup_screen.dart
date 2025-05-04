@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
+import 'ChangeRegionScreen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -124,16 +126,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
               ),
               SizedBox(height: 16),
-              GestureDetector(
-                onTap: () => _showRegionPicker(context),
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: CupertinoColors.white,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+              CupertinoButton(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                color: CupertinoColors.white,
+                borderRadius: BorderRadius.circular(8),
+                onPressed: () async {
+                  final selectedRegion = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ChangeRegionScreen()),
+                  );
+                  if (selectedRegion is String) {
+                    setState(() {
+                      _selectedRegion = selectedRegion;
+                      _regionController.text = selectedRegion;
+                    });
+                  }
+                },
+                child: Align(
+                  alignment: Alignment.centerLeft,
                   child: Text(
-                    _selectedRegion ?? 'Select Region',
+                    _selectedRegion ?? 'Verify Region',
                     style: TextStyle(
                       color: _selectedRegion == null
                           ? CupertinoColors.activeBlue
@@ -159,31 +171,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-  void _showRegionPicker(BuildContext context) {
-    showCupertinoModalPopup(
-      context: context,
-      builder: (_) => CupertinoActionSheet(
-        title: Text('Select Region'),
-        actions: _regions.map((region) {
-          return CupertinoActionSheetAction(
-            child: Text(region),
-            onPressed: () {
-              setState(() {
-                _selectedRegion = region;
-                _regionController.text = region;
-              });
-              Navigator.pop(context);
-            },
-          );
-        }).toList(),
-        cancelButton: CupertinoActionSheetAction(
-          isDefaultAction: true,
-          onPressed: () => Navigator.pop(context),
-          child: Text('Cancel'),
         ),
       ),
     );
