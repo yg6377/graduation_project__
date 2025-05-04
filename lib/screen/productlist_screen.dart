@@ -305,6 +305,20 @@ class _ProductListScreenState extends State<ProductListScreen> {
     }
   }
 
+  Future<void> updateChatCountForProduct(String productId) async {
+    final chatRoomSnapshot = await FirebaseFirestore.instance
+        .collection('chatRooms')
+        .where('productId', isEqualTo: productId)
+        .get();
+
+    final chatCount = chatRoomSnapshot.docs.length;
+
+    await FirebaseFirestore.instance
+        .collection('products')
+        .doc(productId)
+        .update({'chats': chatCount});
+  }
+
   Future<void> _loadRegionProducts() async {
     final region = widget.region;
     if (region == null) {
@@ -318,6 +332,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
             .collection('products')
             .orderBy('updatedAt', descending: true)
             .get();
+        // Update chat count for each product
+        for (final doc in snap.docs) {
+          final productId = doc.id;
+          await updateChatCountForProduct(productId);
+        }
         print('📦 전체 상품 로드 완료: ${snap.docs.length}개');
         setState(() {
           _products = snap.docs;
@@ -349,7 +368,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
           .where('region.district', isEqualTo: userDistrict)
           .orderBy('updatedAt', descending: true)
           .get();
-
+      // Update chat count for each product
+      for (final doc in snap.docs) {
+        final productId = doc.id;
+        await updateChatCountForProduct(productId);
+      }
       print('📦 $userDistrict 지역 상품 로드 완료: ${snap.docs.length}개');
       setState(() {
         _products = snap.docs;
