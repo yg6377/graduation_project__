@@ -184,11 +184,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               SizedBox(height: 16),
               OutlinedButton(
-                onPressed: () {
-                  Navigator.push(
+                onPressed: () async {
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => ChangeRegionScreen()),
                   );
+                  if (result == true) {
+                    await _loadProfileData();
+                  }
                 },
                 child: Text('Change Location'),
               ),

@@ -53,7 +53,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Text('Go'),
                 onPressed: () {
                   Navigator.of(context).pop();
-                  Navigator.pushNamed(context, '/changeRegion');
+                  Navigator.pushNamed(context, '/changeRegion').then((result) {
+                    if (result == true) {
+                      _loadUserRegion();
+                    }
+                  });
                 },
               ),
             ],
@@ -127,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Icon(Icons.location_on, color: Color(0xFF3B82F6), size: 20),
                       SizedBox(width: 4),
                       Text(
-                        _selectedRegion ?? '지역 없음',
+                        _selectedRegion ?? 'Need Verify',
                         style: TextStyle(
                           color: Color(0xFF3B82F6),
                           fontSize: 18,
