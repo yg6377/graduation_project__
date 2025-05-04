@@ -420,7 +420,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         if (!snap.hasData || !snap.data!.exists) return SizedBox.shrink();
         final data = snap.data!.data()! as Map<String, dynamic>;
         final title = data['productTitle'] as String? ?? '';
-        final img = data['productImageUrl'] as String? ?? '';
+        final imgList = List<String>.from(data['imageUrls'] ?? []);
+        final img = data.containsKey('imageUrls') && imgList.isNotEmpty
+            ? imgList.first
+            : (data['imageUrl'] as String? ?? '');
         final price = data['productPrice'] as String? ?? '';
         final saleStatusFromDb = data['saleStatus'] as String? ?? 'selling';
         final productId = data['productId'] as String? ?? '';
