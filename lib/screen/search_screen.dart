@@ -193,7 +193,8 @@ class SearchResultScreen extends StatelessWidget {
             final productData = product.data() as Map<String, dynamic>;
             final Map<String, dynamic> regionMap = productData['region'] is Map<String, dynamic> ? productData['region'] as Map<String, dynamic> : {};
             final String title = productData['title'] ?? '';
-            final String imageUrl = (productData['imageUrl'] ?? '').toString();
+            final List<String> imageUrls = List<String>.from(productData['imageUrls'] ?? []);
+            final String imageUrl = imageUrls.isNotEmpty ? imageUrls.first : '';
             final String price = productData['price']?.toString() ?? '';
             // region is now a Map<String, dynamic>
             final String saleStatus = productData['saleStatus'] ?? '';
@@ -247,6 +248,7 @@ class SearchResultScreen extends StatelessWidget {
                         productImageUrl: imageUrl,
                         productPrice: price,
                         region: regionMap,
+                        imageUrls: List<String>.from(productData['imageUrls'] ?? []),
                       ),
                     ),
                   );
