@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
+import 'ChangeRegionScreen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -15,12 +17,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
   final TextEditingController _regionController = TextEditingController();
-
-  final List<String> _regions = [
-    'Danshui', 'Taipei', 'New Taipei', 'Kaohsiung', 'Taichung',
-    'Tainan', 'Hualien', 'Keelung', 'Taoyuan', 'Hsinchu',
-  ];
-  String? _selectedRegion;
 
   // 회원가입 기능
   Future<void> signUp() async {
@@ -50,7 +46,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       await FirebaseFirestore.instance.collection('users').doc(credential.user!.uid).set({
         'email': _emailController.text,
         'nickname': 'User${Random().nextInt(100000)}',
-        'region': _regionController.text,
+        'region': '',
         'userId': credential.user!.uid,
         'createdAt': FieldValue.serverTimestamp(),
       });
@@ -123,26 +119,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              SizedBox(height: 16),
-              GestureDetector(
-                onTap: () => _showRegionPicker(context),
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: CupertinoColors.white,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    _selectedRegion ?? 'Select Region',
-                    style: TextStyle(
-                      color: _selectedRegion == null
-                          ? CupertinoColors.activeBlue
-                          : CupertinoColors.black,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
               SizedBox(height: 30),
               CupertinoButton(
                 color: CupertinoColors.activeBlue,
@@ -159,31 +135,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-  void _showRegionPicker(BuildContext context) {
-    showCupertinoModalPopup(
-      context: context,
-      builder: (_) => CupertinoActionSheet(
-        title: Text('Select Region'),
-        actions: _regions.map((region) {
-          return CupertinoActionSheetAction(
-            child: Text(region),
-            onPressed: () {
-              setState(() {
-                _selectedRegion = region;
-                _regionController.text = region;
-              });
-              Navigator.pop(context);
-            },
-          );
-        }).toList(),
-        cancelButton: CupertinoActionSheetAction(
-          isDefaultAction: true,
-          onPressed: () => Navigator.pop(context),
-          child: Text('Cancel'),
         ),
       ),
     );

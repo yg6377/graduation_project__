@@ -32,6 +32,35 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadUserRegion();
+    _checkRegionAfterLogin();
+  }
+
+  void _checkRegionAfterLogin() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final region = doc.data()?['region'];
+    if (region == null || (region is String && region.trim().isEmpty)) {
+      Future.microtask(() {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Verify your region!'),
+            content: Text('Please verify your region to continue using the app.'),
+            actions: [
+              TextButton(
+                child: Text('Go'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.pushNamed(context, '/changeRegion');
+                },
+              ),
+            ],
+          ),
+        );
+      });
+    }
   }
 
   Future<void> _loadUserRegion() async {
