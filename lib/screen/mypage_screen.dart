@@ -137,18 +137,30 @@ class _MyPageScreenState extends State<MyPageScreen> {
                                 future: FirebaseFirestore.instance.collection('users').doc(_currentUser?.uid).get(),
                                 builder: (context, snapshot) {
                                   if (snapshot.connectionState == ConnectionState.waiting) {
-                                    return Text("Your Location: ...", style: TextStyle(fontSize: 14, color: Colors.blueGrey));
+                                    return Row(
+                                      children: [
+                                        Icon(Icons.location_on, color: Colors.blueGrey, size: 16),
+                                        SizedBox(width: 4),
+                                        Text("...", style: TextStyle(fontSize: 14, color: Colors.blueGrey)),
+                                      ],
+                                    );
                                   }
                                   String regionText = "Unknown";
                                   if (snapshot.hasData && snapshot.data!.exists) {
                                     final region = snapshot.data!.get('region');
-                                    regionText = region.toString();
+                                    if (region is Map<String, dynamic>) {
+                                      final city = (region['city'] ?? '').toString().replaceAll(' City', '');
+                                      final district = (region['district'] ?? '').toString().replaceAll(' District', '');
+                                      regionText = '$city, $district';
+                                    } else {
+                                      regionText = region.toString();
+                                    }
                                   }
                                   return Row(
                                     children: [
-                                      Expanded(
-                                        child: Text("Your Location: $regionText", style: TextStyle(fontSize: 14, color: Colors.blueGrey)),
-                                      ),
+                                      Icon(Icons.location_on, color: Colors.blueGrey, size: 16),
+                                      SizedBox(width: 4),
+                                      Text(regionText, style: TextStyle(fontSize: 14, color: Colors.blueGrey)),
                                     ],
                                   );
                                 },
