@@ -484,11 +484,31 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (img.isNotEmpty)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: Image.network(img, width: 50, height: 50, fit: BoxFit.cover),
-                      ),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: img.isNotEmpty
+                          ? FadeInImage.assetNetwork(
+                              placeholder: 'assets/images/huanhuan_no_image.png',
+                              image: img,
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
+                              imageErrorBuilder: (context, error, stackTrace) {
+                                return Image.asset(
+                                  'assets/images/huanhuan_no_image.png',
+                                  width: 50,
+                                  height: 50,
+                                  fit: BoxFit.cover,
+                                );
+                              },
+                            )
+                          : Image.asset(
+                              'assets/images/huanhuan_no_image.png',
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
+                            ),
+                    ),
                     SizedBox(width: 8),
                     Expanded(
                       child: Column(
