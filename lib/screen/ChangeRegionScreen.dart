@@ -32,7 +32,7 @@ class _ChangeRegionScreenState extends State<ChangeRegionScreen> {
         permission = await _location.requestPermission();
         if (permission != loc.PermissionStatus.granted) {
           setState(() {
-            _currentAddress = '위치 권한이 거부되었습니다.';
+            _currentAddress = 'Location permission was denied.';
           });
           return;
         }
@@ -87,9 +87,9 @@ class _ChangeRegionScreenState extends State<ChangeRegionScreen> {
         _savedAddress = savedAddress;
       });
     } catch (e) {
-      print('위치 가져오기 실패: $e');
+      print('Failed to get location: $e');
       setState(() {
-        _currentAddress = '위치를 가져오는 데 실패했습니다.';
+        _currentAddress = 'Failed to get location.';
       });
     }
   }

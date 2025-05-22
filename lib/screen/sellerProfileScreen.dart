@@ -24,7 +24,7 @@ class SellerProfileScreen extends StatelessWidget {
           final regionMap = userData['region'] as Map<String, dynamic>?;
           final city = regionMap?['city']?.replaceAll(' City', '') ?? '';
           final district = regionMap?['district']?.replaceAll(' District', '') ?? '';
-          final region = '$city $district'.trim().isNotEmpty ? '$city $district' : '지역 미설정';
+          final region = '$city $district'.trim().isNotEmpty ? '$city $district' : 'none';
 
           return Column(
             children: [

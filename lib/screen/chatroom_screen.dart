@@ -529,145 +529,152 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                                   final isOwner = _currentUser?.uid == productData['sellerUid'];
                                   final productSaleStatus = productData['saleStatus'] as String? ?? 'selling';
                                   return isOwner
-                                      ? DropdownButton<String>(
-                                    value: ['selling', 'reserved', 'soldout'].contains(productSaleStatus) ? productSaleStatus : 'selling',
-                                    items: [
-                                      DropdownMenuItem(value: 'selling', child: Text('Selling')),
-                                      DropdownMenuItem(value: 'reserved', child: Text('Reserved')),
-                                      DropdownMenuItem(value: 'soldout', child: Text('Sold Out')),
-                                    ],
-                                    onChanged: (value) async {
-                                      if (value == null || value == productSaleStatus) return;
-                                      // 예약 또는 판매완료 시 사용자 확인 다이얼로그
-                                      if (value == 'reserved') {
-                                        final confirmed = await showDialog<bool>(
-                                          context: context,
-                                          builder: (ctx) => AlertDialog(
-                                            title: Text('Reservation Confirmation'),
-                                            content: Text('Do you want to reserve the product with $_otherUserNickname?'),
-                                            actions: [
-                                              TextButton(
-                                                child: Text('No'),
-                                                onPressed: () => Navigator.of(ctx).pop(false),
-                                              ),
-                                              TextButton(
-                                                child: Text('Yes'),
-                                                onPressed: () => Navigator.of(ctx).pop(true),
-                                              ),
+                                      ? DropdownButtonHideUnderline(
+                                          child: DropdownButton<String>(
+                                            value: ['selling', 'reserved', 'soldout'].contains(productSaleStatus) ? productSaleStatus : 'selling',
+                                            items: [
+                                              DropdownMenuItem(value: 'selling', child: Text('Selling')),
+                                              DropdownMenuItem(value: 'reserved', child: Text('Reserved')),
+                                              DropdownMenuItem(value: 'soldout', child: Text('Sold Out')),
                                             ],
+                                            onChanged: (_saleStatus == 'soldout')
+                                                ? null
+                                                : (value) async {
+                                                    if (value == null || value == productSaleStatus) return;
+                                                    // 예약 또는 판매완료 시 사용자 확인 다이얼로그
+                                                    if (value == 'reserved') {
+                                                      final confirmed = await showDialog<bool>(
+                                                        context: context,
+                                                        builder: (ctx) => AlertDialog(
+                                                          title: Text('Reservation Confirmation'),
+                                                          content: Text('Do you want to reserve the product with $_otherUserNickname?'),
+                                                          actions: [
+                                                            TextButton(
+                                                              child: Text('No'),
+                                                              onPressed: () => Navigator.of(ctx).pop(false),
+                                                            ),
+                                                            TextButton(
+                                                              child: Text('Yes'),
+                                                              onPressed: () => Navigator.of(ctx).pop(true),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      );
+                                                      if (confirmed != true) return;
+                                                      final chatRef = FirebaseFirestore.instance
+                                                          .collection('chatRooms')
+                                                          .doc(widget.chatRoomId);
+                                                      await chatRef.update({'saleStatus': value});
+                                                      if (productId.isNotEmpty) {
+                                                        await FirebaseFirestore.instance
+                                                            .collection('products')
+                                                            .doc(productId)
+                                                            .update({'saleStatus': value});
+                                                      }
+                                                      setState(() {
+                                                        _saleStatus = value;
+                                                      });
+                                                      await chatRef.collection('message').add({
+                                                        'text': 'You have scheduled a transaction with $_otherUserNickname.',
+                                                        'sender': 'system',
+                                                        'timestamp': FieldValue.serverTimestamp(),
+                                                        'type': 'reserved',
+                                                      });
+                                                      // 예약 알림 생성
+                                                      await FirebaseFirestore.instance
+                                                          .collection('users')
+                                                          .doc(otherUid)
+                                                          .collection('notifications')
+                                                          .add({
+                                                        'type': 'reserved',
+                                                        'from': _currentUser?.uid,
+                                                        'to': otherUid,
+                                                        'nickname': _myNickname,
+                                                        'message': '$_myNickname comfirmed a reservation.',
+                                                        'timestamp': FieldValue.serverTimestamp(),
+                                                        'read': false,
+                                                        'chatRoomId': widget.chatRoomId,
+                                                        'productId': productId,
+                                                        'saleStatus': 'reserved',
+                                                      });
+                                                    } else if (value == 'soldout') {
+                                                      final confirmed = await showDialog<bool>(
+                                                        context: context,
+                                                        builder: (ctx) => AlertDialog(
+                                                          title: Text('Sold Out Confirmation'),
+                                                          content: Text('Once marked as Sold Out, you will not be able to change the sale status again. Do you want to continue?'),
+                                                          actions: [
+                                                            TextButton(
+                                                              child: Text('No'),
+                                                              onPressed: () => Navigator.of(ctx).pop(false),
+                                                            ),
+                                                            TextButton(
+                                                              child: Text('Yes'),
+                                                              onPressed: () => Navigator.of(ctx).pop(true),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      );
+                                                      if (confirmed != true) return;
+                                                      final chatRef = FirebaseFirestore.instance
+                                                          .collection('chatRooms')
+                                                          .doc(widget.chatRoomId);
+                                                      await chatRef.update({'saleStatus': value});
+                                                      if (productId.isNotEmpty) {
+                                                        await FirebaseFirestore.instance
+                                                            .collection('products')
+                                                            .doc(productId)
+                                                            .update({'saleStatus': value});
+                                                      }
+                                                      setState(() {
+                                                        _saleStatus = value;
+                                                      });
+                                                      final reviewPrompt = 'Did you have a good transaction with $_otherUserNickname? Leave a review. [Review]';
+                                                      await chatRef.collection('message').add({
+                                                        'text': reviewPrompt,
+                                                        'sender': 'system',
+                                                        'timestamp': FieldValue.serverTimestamp(),
+                                                        'type': 'review_prompt',
+                                                      });
+                                                      // 판매완료 알림 생성
+                                                      await FirebaseFirestore.instance
+                                                          .collection('users')
+                                                          .doc(otherUid)
+                                                          .collection('notifications')
+                                                          .add({
+                                                        'type': 'transactionComplete',
+                                                        'from': _currentUser?.uid,
+                                                        'to': otherUid,
+                                                        'nickname': _myNickname,
+                                                        'message': '$_myNickname completed a transaction with you!',
+                                                        'timestamp': FieldValue.serverTimestamp(),
+                                                        'read': false,
+                                                        'chatRoomId': widget.chatRoomId,
+                                                        'productId': productId,
+                                                        'saleStatus': 'soldout',
+                                                      });
+                                                    } else {
+                                                      // 일반 상태 변경(판매중 등)은 바로 처리
+                                                      final chatRef = FirebaseFirestore.instance
+                                                          .collection('chatRooms')
+                                                          .doc(widget.chatRoomId);
+                                                      await chatRef.update({'saleStatus': value});
+                                                      if (productId.isNotEmpty) {
+                                                        await FirebaseFirestore.instance
+                                                            .collection('products')
+                                                            .doc(productId)
+                                                            .update({'saleStatus': value});
+                                                      }
+                                                      setState(() {
+                                                        _saleStatus = value;
+                                                      });
+                                                    }
+                                                  },
+                                            // Disable dropdown when _saleStatus == 'soldout'
+                                            disabledHint: Text('Sold Out', style: TextStyle(color: Colors.grey)),
+                                            isExpanded: false,
                                           ),
-                                        );
-                                        if (confirmed != true) return;
-                                        final chatRef = FirebaseFirestore.instance
-                                            .collection('chatRooms')
-                                            .doc(widget.chatRoomId);
-                                        await chatRef.update({'saleStatus': value});
-                                        if (productId.isNotEmpty) {
-                                          await FirebaseFirestore.instance
-                                              .collection('products')
-                                              .doc(productId)
-                                              .update({'saleStatus': value});
-                                        }
-                                        setState(() {
-                                          _saleStatus = value;
-                                        });
-                                        await chatRef.collection('message').add({
-                                          'text': 'You have scheduled a transaction with $_otherUserNickname.',
-                                          'sender': 'system',
-                                          'timestamp': FieldValue.serverTimestamp(),
-                                          'type': 'reserved',
-                                        });
-                                        // 예약 알림 생성
-                                        await FirebaseFirestore.instance
-                                            .collection('users')
-                                            .doc(otherUid)
-                                            .collection('notifications')
-                                            .add({
-                                          'type': 'reserved',
-                                          'from': _currentUser?.uid,
-                                          'to': otherUid,
-                                          'nickname': _myNickname,
-                                          'message': '$_myNickname comfirmed a reservation.',
-                                          'timestamp': FieldValue.serverTimestamp(),
-                                          'read': false,
-                                          'chatRoomId': widget.chatRoomId,
-                                          'productId': productId,
-                                          'saleStatus': 'reserved',
-                                        });
-                                      } else if (value == 'soldout') {
-                                        final confirmed = await showDialog<bool>(
-                                          context: context,
-                                          builder: (ctx) => AlertDialog(
-                                            title: Text('Sale Confirmation'),
-                                            content: Text('Do you want to mark the sale as completed with $_otherUserNickname?'),
-                                            actions: [
-                                              TextButton(
-                                                child: Text('No'),
-                                                onPressed: () => Navigator.of(ctx).pop(false),
-                                              ),
-                                              TextButton(
-                                                child: Text('Yes'),
-                                                onPressed: () => Navigator.of(ctx).pop(true),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                        if (confirmed != true) return;
-                                        final chatRef = FirebaseFirestore.instance
-                                            .collection('chatRooms')
-                                            .doc(widget.chatRoomId);
-                                        await chatRef.update({'saleStatus': value});
-                                        if (productId.isNotEmpty) {
-                                          await FirebaseFirestore.instance
-                                              .collection('products')
-                                              .doc(productId)
-                                              .update({'saleStatus': value});
-                                        }
-                                        setState(() {
-                                          _saleStatus = value;
-                                        });
-                                        final reviewPrompt = 'Did you have a good transaction with $_otherUserNickname? Leave a review. [Review]';
-                                        await chatRef.collection('message').add({
-                                          'text': reviewPrompt,
-                                          'sender': 'system',
-                                          'timestamp': FieldValue.serverTimestamp(),
-                                          'type': 'review_prompt',
-                                        });
-                                        // 판매완료 알림 생성
-                                        await FirebaseFirestore.instance
-                                            .collection('users')
-                                            .doc(otherUid)
-                                            .collection('notifications')
-                                            .add({
-                                          'type': 'transactionComplete',
-                                          'from': _currentUser?.uid,
-                                          'to': otherUid,
-                                          'nickname': _myNickname,
-                                          'message': '$_myNickname completed a transaction with you!',
-                                          'timestamp': FieldValue.serverTimestamp(),
-                                          'read': false,
-                                          'chatRoomId': widget.chatRoomId,
-                                          'productId': productId,
-                                          'saleStatus': 'soldout',
-                                        });
-                                      } else {
-                                        // 일반 상태 변경(판매중 등)은 바로 처리
-                                        final chatRef = FirebaseFirestore.instance
-                                            .collection('chatRooms')
-                                            .doc(widget.chatRoomId);
-                                        await chatRef.update({'saleStatus': value});
-                                        if (productId.isNotEmpty) {
-                                          await FirebaseFirestore.instance
-                                              .collection('products')
-                                              .doc(productId)
-                                              .update({'saleStatus': value});
-                                        }
-                                        setState(() {
-                                          _saleStatus = value;
-                                        });
-                                      }
-                                    },
-                                  )
+                                        )
                                       : Container(
                                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
@@ -749,6 +756,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 final data = doc.data() ?? {};
                 final participants = List<String>.from(data['participants'] ?? []);
                 final uid = _currentUser!.uid;
+                final leavers = List<String>.from(data['leavers'] ?? []);
+
+                // Only send the system message if both users have NOT left yet (i.e., current user is the first to leave)
+                if (!leavers.contains(uid) && !leavers.contains(otherUid)) {
+                  await chatRoomRef.collection('message').add({
+                    'text': '$_myNickname has left the chat.',
+                    'sender': 'system',
+                    'timestamp': FieldValue.serverTimestamp(),
+                  });
+                }
 
                 await chatRoomRef.update({
                   'leavers': FieldValue.arrayUnion([uid]),

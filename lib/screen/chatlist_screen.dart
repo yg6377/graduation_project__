@@ -53,7 +53,7 @@ class ChatListScreen extends StatelessWidget {
           final productNameMap = <String, String>{};
 
 
-          for (var doc in docs) {
+          for (var doc in chats) {
             final data = doc.data()! as Map<String, dynamic>;
             final parts = List<String>.from(data['participants'] ?? []);
             final other = parts.firstWhere((u) => u != me, orElse: () => "");
@@ -105,7 +105,7 @@ class ChatListScreen extends StatelessWidget {
 
                   final profileUrl = profileUrlMap[otherUid] ?? "";
                   final nick = nicknameMap[otherUid] ?? "Unknown";
-                  final productName = data['productName'] ?? 'Unknown Product';
+                  final productName = productNameMap[doc.id] ?? data['productName'] ?? 'Unknown Product';
 
 
                   return Dismissible(
@@ -132,16 +132,6 @@ class ChatListScreen extends StatelessWidget {
                     },
                     onDismissed: (_) async {
                       final chatRoomRef = FirebaseFirestore.instance.collection('chatRooms').doc(doc.id);
-                      await chatRoomRef.set({
-                        'participants': [me, otherUid],
-                        'leavers': [],
-                        'lastMessage': '',
-                        'lastTime': FieldValue.serverTimestamp(),
-                        'unreadCounts': {
-                          me: 0,
-                          otherUid: 0,
-                        },
-                      });
 
                       final data = doc.data()! as Map<String, dynamic>;
                       final participants = List<String>.from(data['participants'] ?? []);
@@ -149,17 +139,26 @@ class ChatListScreen extends StatelessWidget {
 
                       if (currentUid == null) return;
 
+                      final updatedDoc = await chatRoomRef.get();
+                      final updatedData = updatedDoc.data() as Map<String, dynamic>;
+                      final leavers = List<String>.from(updatedData['leavers'] ?? []);
+
+                      if (leavers.contains(currentUid)) {
+                        // Already left, do nothing
+                        return;
+                      }
+
                       // 1. leavers 필드에 현재 유저 추가
                       await chatRoomRef.update({
                         'leavers': FieldValue.arrayUnion([currentUid])
                       });
 
                       // 2. 상대방도 나간 경우 전체 삭제
-                      final updatedDoc = await chatRoomRef.get();
-                      final updatedData = updatedDoc.data() as Map<String, dynamic>;
-                      final leavers = List<String>.from(updatedData['leavers'] ?? []);
+                      final updatedDoc2 = await chatRoomRef.get();
+                      final updatedData2 = updatedDoc2.data() as Map<String, dynamic>;
+                      final leavers2 = List<String>.from(updatedData2['leavers'] ?? []);
 
-                      final allLeft = participants.every((uid) => leavers.contains(uid));
+                      final allLeft = participants.every((uid) => leavers2.contains(uid));
 
                       if (allLeft) {
                         final messages = await chatRoomRef.collection('message').get();
@@ -167,6 +166,17 @@ class ChatListScreen extends StatelessWidget {
                           await message.reference.delete();
                         }
                         await chatRoomRef.delete();
+                      } else {
+                        // Only send "user has left" system message if current user is first to leave
+                        final otherUid = participants.firstWhere((u) => u != currentUid, orElse: () => "");
+                        if (!leavers.contains(currentUid) && !leavers.contains(otherUid)) {
+                          await chatRoomRef.collection('message').add({
+                            'senderId': 'system',
+                            'text': '${nicknameMap[currentUid] ?? 'A user'} has left the chat.',
+                            'timestamp': FieldValue.serverTimestamp(),
+                            'type': 'system',
+                          });
+                        }
                       }
                     },
                     background: Container(color: Colors.red),
