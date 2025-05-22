@@ -113,19 +113,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         .listen((snap) {
       for (final change in snap.docChanges) {
         if (change.type == DocumentChangeType.added) {
-          final data = change.doc.data() as Map<String, dynamic>;
-          final sender = data['sender'] as String;
-          final text = data['text'] as String;
-          if (sender != meUid && mounted) {
-            Flushbar(
-              title: 'New Message',
-              message: text,
-              duration: Duration(seconds: 3),
-              flushbarPosition: FlushbarPosition.TOP,
-              margin: EdgeInsets.all(8),
-              borderRadius: BorderRadius.circular(8),
-            ).show(context);
-          }
+          // Previously: Show Flushbar for incoming messages (removed)
+          // final data = change.doc.data() as Map<String, dynamic>;
+          // final sender = data['sender'] as String;
+          // final text = data['text'] as String;
+          // if (sender != meUid && mounted) {
+          //   Flushbar(
+          //     title: 'New Message',
+          //     message: text,
+          //     duration: Duration(seconds: 3),
+          //     flushbarPosition: FlushbarPosition.TOP,
+          //     margin: EdgeInsets.all(8),
+          //     borderRadius: BorderRadius.circular(8),
+          //   ).show(context);
+          // }
         }
       }
     });
@@ -586,7 +587,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                                           'from': _currentUser?.uid,
                                           'to': otherUid,
                                           'nickname': _myNickname,
-                                          'message': '$_myNickname 님이 예약을 확정했습니다.',
+                                          'message': '$_myNickname comfirmed a reservation.',
                                           'timestamp': FieldValue.serverTimestamp(),
                                           'read': false,
                                           'chatRoomId': widget.chatRoomId,
