@@ -78,7 +78,7 @@ class _ReviewFormState extends State<ReviewForm> {
 
     await Future.delayed(Duration(seconds: 1));
     if (mounted) {
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
     }
   }
 

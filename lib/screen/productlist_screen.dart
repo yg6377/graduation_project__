@@ -506,13 +506,14 @@ class _ProductListScreenState extends State<ProductListScreen> {
         color: Color(0xFFEAF6FF),
         child: ListView(
           children: [
-            if (filteredRecommended != null && filteredRecommended.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Text('For you', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-              ...filteredRecommended.map((doc) => buildProductCard(context, doc, _loadRegionProducts)).toList(),
-            ],
+            // 추천 알고리즘은 나중에 손 볼 예정
+            // if (filteredRecommended != null && filteredRecommended.isNotEmpty) ...[
+            //   Padding(
+            //     padding: const EdgeInsets.all(12.0),
+            //     child: Text('For you', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            //   ),
+            //   ...filteredRecommended.map((doc) => buildProductCard(context, doc, _loadRegionProducts)).toList(),
+            // ],
             ...filteredProducts.map((product) => buildProductCard(context, product, _loadRegionProducts)).toList(),
           ],
         ),

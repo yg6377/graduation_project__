@@ -27,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   String? _selectedRegion;
   bool _showOnlyAvailable = false;
+  bool _isLoadingRegion = false;
 
   @override
   void initState() {
@@ -68,15 +69,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadUserRegion() async {
+    setState(() => _isLoadingRegion = true);
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
+    if (uid == null) {
+      setState(() => _isLoadingRegion = false);
+      return;
+    }
     final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
     final district = doc.data()?['region']?['district'];
 
     if (district != null) {
       // " District" 문자열 제거
       final cleaned = district.replaceAll(' District', '').trim();
-      setState(() => _selectedRegion = cleaned);
+      setState(() {
+        _selectedRegion = cleaned;
+        _isLoadingRegion = false;
+      });
+    } else {
+      setState(() => _isLoadingRegion = false);
     }
   }
 
@@ -107,10 +117,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      ProductListScreen(
-        region: _selectedRegion,
-        showOnlyAvailable: _showOnlyAvailable,
-      ),
+      // Placeholder; body will be handled below for index 0
+      null,
       ChatListScreen(),
       MyPageScreen(),
     ];
@@ -122,15 +130,22 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Color(0xFFEAF6FF),
         title: _selectedIndex == 0
             ? Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(
-              child: Row(
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.location_on, color: Color(0xFF3B82F6), size: 20),
-                      SizedBox(width: 4),
-                      Text(
+            Row(
+              children: [
+                Icon(Icons.location_on, color: Color(0xFF3B82F6), size: 20),
+                SizedBox(width: 4),
+                _isLoadingRegion
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFF3B82F6),
+                        ),
+                      )
+                    : Text(
                         _selectedRegion ?? 'Need Verify',
                         style: TextStyle(
                           color: Color(0xFF3B82F6),
@@ -138,22 +153,34 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ],
+              ],
+            ),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              decoration: BoxDecoration(
+                border: Border.all(color: Color(0xFF3B82F6)),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Available Only',
+                    style: TextStyle(
+                      color: Color(0xFF3B82F6),
+                      fontSize: 13,
+                    ),
+                  ),
+                  Checkbox(
+                    value: _showOnlyAvailable,
+                    onChanged: (v) =>
+                        setState(() => _showOnlyAvailable = v ?? false),
+                    activeColor: Color(0xFF3B82F6),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
                   ),
                 ],
               ),
-            ),
-            Text('Available Only',
-                style: TextStyle(
-                    color: Color(0xFF3B82F6),
-                    fontSize: 17 )
-            ),
-
-            Checkbox(
-              value: _showOnlyAvailable,
-              onChanged: (v) =>
-                  setState(() => _showOnlyAvailable = v ?? false),
-              activeColor: Color(0xFF3B82F6),
             ),
           ],
         )
@@ -201,7 +228,14 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
         elevation: 0,
       ),
-      body: pages[_selectedIndex],
+      body: _selectedIndex == 0
+          ? ((_selectedRegion == null || _isLoadingRegion)
+              ? Center(child: CircularProgressIndicator())
+              : ProductListScreen(
+                  region: _selectedRegion,
+                  showOnlyAvailable: _showOnlyAvailable,
+                ))
+          : pages[_selectedIndex],
       bottomNavigationBar: Card(
         elevation: 4,
         margin: EdgeInsets.zero,
