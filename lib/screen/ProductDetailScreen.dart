@@ -20,6 +20,8 @@ class ProductDetailScreen extends StatefulWidget {
   final String productTitle;
   final String productImageUrl;
   final String productPrice;
+  final List<String>? imageUrls;
+  final Map<String, dynamic> region;
 
   const ProductDetailScreen({
     required this.productId,
@@ -35,6 +37,8 @@ class ProductDetailScreen extends StatefulWidget {
     required this.productTitle,
     required this.productImageUrl,
     required this.productPrice,
+    required this.region,
+    this.imageUrls,
     Key? key,
   }) : super(key: key);
 
@@ -45,11 +49,19 @@ class ProductDetailScreen extends StatefulWidget {
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   bool isLiked = false;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
 
   @override
   void initState() {
     super.initState();
     _fetchLikeStatus();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchLikeStatus() async {
@@ -79,27 +91,37 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       );
       return;
     }
-    final likeRef = FirebaseFirestore.instance
+
+    final productDoc = FirebaseFirestore.instance
         .collection('products')
-        .doc(widget.productId)
+        .doc(widget.productId);
+    final likeRef = productDoc
         .collection('likes')
         .doc(user.uid);
     final likedProductRef = FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('likedProducts')
-        .doc(widget.productId);
+        .doc(widget.productId); // ✅ productId used as doc ID
+
     if (!isLiked) {
-      // Add like to product and add to user's likedProducts
-      await likeRef.set({'liked': true});
-      await likedProductRef.set({'liked': true});
+      await likedProductRef.set({
+        'liked': true,
+        'productId': widget.productId,
+      });
+      await likeRef.set({
+        'liked': true,
+        'userId': user.uid,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      await productDoc.update({'likes': FieldValue.increment(1)});
       setState(() {
         isLiked = true;
       });
     } else {
-      // Remove like from product and remove from user's likedProducts
       await likeRef.delete();
       await likedProductRef.delete();
+      await productDoc.update({'likes': FieldValue.increment(-1)});
       setState(() {
         isLiked = false;
       });
@@ -121,7 +143,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
     final isOwner = FirebaseAuth.instance.currentUser?.uid == widget.sellerUid;
     return Scaffold(
-
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,10 +153,51 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 SizedBox(
                   width: MediaQuery.of(context).size.width,
                   height: 340,
-                  child: widget.imageUrl.isNotEmpty
-                      ? Image.network(widget.imageUrl, fit: BoxFit.cover)
-                      : Image.asset('assets/images/huanhuan_no_image.png', fit: BoxFit.cover),
+                  child: Builder(
+                    builder: (_) {
+                      if (widget.imageUrls != null && widget.imageUrls!.isNotEmpty) {
+                        return PageView.builder(
+                          controller: _pageController,
+                          itemCount: widget.imageUrls!.length,
+                          onPageChanged: (index) {
+                            setState(() {
+                              _currentPage = index;
+                            });
+                          },
+                          itemBuilder: (context, index) {
+                            final imageUrl = widget.imageUrls![index];
+                            return Image.network(imageUrl, fit: BoxFit.cover);
+                          },
+                        );
+                      } else if (widget.imageUrl.isNotEmpty && widget.imageUrl.startsWith('http')) {
+                        return Image.network(widget.imageUrl, fit: BoxFit.cover);
+                      } else {
+                        return Image.asset('assets/images/huanhuan_no_image.png', fit: BoxFit.cover);
+                      }
+                    },
+                  ),
                 ),
+                // Page indicator
+                if (widget.imageUrls != null && widget.imageUrls!.length > 1)
+                  Positioned(
+                    bottom: 12,
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(widget.imageUrls!.length, (index) {
+                        return Container(
+                          margin: EdgeInsets.symmetric(horizontal: 4),
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _currentPage == index ? Colors.white : Colors.white54,
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
                 Positioned(
                   top: 16,
                   left: 16,
@@ -157,18 +219,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         icon: Icon(Icons.more_vert, color: Colors.black),
                         onSelected: (value) async {
                           if (value == 'edit') {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => EditScreen(
-                                  productId: widget.productId,
-                                  title: widget.title,
-                                  price: widget.price,
-                                  description: widget.description,
-                                  imageUrl: widget.imageUrl,
-                                ),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EditScreen(
+                                productId: widget.productId,
+                                title: widget.title,
+                                price: widget.price,
+                                description: widget.description,
+                                imageUrl: widget.imageUrls?.isNotEmpty == true ? widget.imageUrls!.first : '',
                               ),
-                            );
+                            ),
+                          );
                           } else if (value == 'delete') {
                             bool confirmed = await showDialog(
                               context: context,
@@ -227,7 +289,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         return Text('⚠️ 판매자 정보가 상품과 일치하지 않습니다.', style: TextStyle(fontSize: 14, color: Colors.red));
                       }
                       final nickname = data['nickname'] ?? 'Unknown';
-                      final region = data['region'] ?? '';
+                      final regionData = data['region'] is Map<String, dynamic> ? data['region'] as Map<String, dynamic> : {};
+                      final city = regionData['city'] ?? '';
+                      final district = regionData['district'] ?? '';
                       final profileImage = data['profileImageUrl'];
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,7 +301,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => SellerProfileScreen(sellerUid: widget.sellerUid),
+                          builder: (_) => SellerProfileScreen(sellerUid: widget.sellerUid),
                                 ),
                               );
                             },
@@ -265,7 +329,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                         Icon(Icons.place, size: 16, color: Colors.grey),
                                         SizedBox(width: 4),
                                         Text(
-                                          region,
+                                          '$city, $district',
                                           style: TextStyle(fontSize: 14, color: Colors.grey),
                                         ),
                                       ],
@@ -422,19 +486,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    icon: Icon(Icons.mode_comment_outlined, size: 30),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ProductCommentsScreen(
-                            productId: widget.productId,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                  // 📴 Comment feature temporarily disabled
+                  // IconButton(
+                  //   icon: Icon(Icons.mode_comment_outlined, size: 30),
+                  //   onPressed: () {
+                  //     Navigator.push(
+                  //       context,
+                  //       MaterialPageRoute(
+                  //         builder: (context) => ProductCommentsScreen(
+                  //           productId: widget.productId,
+                  //         ),
+                  //       ),
+                  //     );
+                  //   },
+                  // ),
                   SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: () async {
@@ -464,8 +529,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                       // 2) 채팅방이 없으면, 상품 정보도 같이 읽어서 만든다
                       final chatSnapshot = await chatRef.get();
-                      if (!chatSnapshot.exists) {
-                        // → 여기서 prodData 를 정의!
+                      if (chatSnapshot.exists) {
+                        final existingData = chatSnapshot.data() as Map<String, dynamic>;
+                        final leavers = List<String>.from(existingData['leavers'] ?? []);
+                        if (leavers.contains(myUid)) {
+                          // Remove current user from leavers list to rejoin chat
+                          await chatRef.update({
+                            'leavers': FieldValue.arrayRemove([myUid])
+                          });
+                        }
+                      } else {
+                        // create new chat room
                         final prodSnap = await FirebaseFirestore.instance
                             .collection('products')
                             .doc(widget.productId)
@@ -488,8 +562,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           'productTitle'     : prodData['title'] ?? '',
                           'productImageUrl'  : prodData['imageUrl'] ?? '',
                           'productPrice'     : prodData['price'].toString(),
+                          'saleStatus'       : prodData['saleStatus'] ?? 'selling',
+                          'leavers'          : [], // initialize
+                          'productName'      : prodData['productName'] ?? 'Unknown Product',
+
                         });
                       }
+
+                      // Read product's saleStatus for passing to ChatRoomScreen
+                      final prodSnap = await FirebaseFirestore.instance
+                          .collection('products')
+                          .doc(widget.productId)
+                          .get();
+                      final prodData = prodSnap.data() as Map<String, dynamic>? ?? {};
+                      final saleStatus = prodData['saleStatus'] ?? 'selling';
 
                       Navigator.push(
                         context,
@@ -497,10 +583,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           builder: (_) => ChatRoomScreen(
                             chatRoomId: chatRoomId,
                             userName:   widget.userName,
-                            //productTitle: widget.title,
-                            //productImageUrl: widget.imageUrl,
-                            //productPrice: widget.price,
-
+                            saleStatus: saleStatus,
                           ),
                         ),
                       );

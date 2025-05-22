@@ -5,13 +5,89 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'recommendation_service.dart';
 
+Widget buildProductCard(BuildContext context, DocumentSnapshot doc, Future<void> Function() reloadProducts) {
+  final data = doc.data() as Map<String, dynamic>;
+  final title = data['title'] ?? '';
+  final condition = data['condition'] ?? '';
+  final price = data['price'].toString();
+  final List<dynamic>? imageUrls = data['imageUrls'];
+  final String imageUrl = (imageUrls != null && imageUrls.isNotEmpty)
+      ? imageUrls.first.toString()
+      : (data['imageUrl'] ?? 'assets/images/huanhuan_no_image.png').toString();
+  final Map<String, dynamic> regionMap =
+      (data['region'] is Map<String, dynamic>)
+          ? data['region'] as Map<String, dynamic>
+          : (data['region'] is String)
+              ? {'city': data['region'], 'district': ''}
+              : {};
+  final saleStatus = data['saleStatus'] ?? '';
+  final productId = doc.id;
+  final description = data['description'] ?? '';
+  final sellerEmail = data['sellerEmail'] ?? '';
+  final sellerUid = data['sellerUid'] ?? '';
+  final timestampValue = data['timestamp'];
+  final String timestampString = (timestampValue is Timestamp) ? timestampValue.toDate().toString() : '';
+  final int likeCount = (data['likes'] ?? 0) is int ? data['likes'] : 0;
+  final int chatCount = (data['chats'] ?? 0) is int ? data['chats'] : 0;
+
+  return ProductCard(
+    title: title,
+    imageUrl: imageUrl,
+    price: price,
+    region: regionMap,
+    saleStatus: saleStatus,
+    condition: condition,
+    likeCount: likeCount,
+    chatCount: chatCount,
+    onTap: () async {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('clickedProducts')
+            .doc(productId)
+            .set({'clickedAt': Timestamp.now()});
+      }
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProductDetailScreen(
+            productId: productId,
+            title: title,
+            price: price,
+            description: description,
+            imageUrl: imageUrl,
+            imageUrls: imageUrls?.cast<String>(),
+            timestamp: timestampString,
+            sellerEmail: sellerEmail,
+            chatRoomId: '',
+            userName: sellerEmail,
+            sellerUid: sellerUid,
+            productTitle: title,
+            productImageUrl: imageUrl,
+            productPrice: price,
+            region: regionMap,
+          ),
+        ),
+      );
+
+      await reloadProducts();
+    },
+  );
+}
+
+
 class ProductCard extends StatelessWidget {
   final String title;
   final String imageUrl;
   final String price;
-  final String region;
+  final Map<String, dynamic> region;
   final String saleStatus;
   final String condition;
+  final int likeCount;
+  final int chatCount;
   final VoidCallback? onTap;
 
   const ProductCard({
@@ -22,6 +98,8 @@ class ProductCard extends StatelessWidget {
     required this.region,
     required this.saleStatus,
     required this.condition,
+    required this.likeCount,
+    required this.chatCount,
     this.onTap,
   }) : super(key: key);
 
@@ -49,19 +127,7 @@ class ProductCard extends StatelessWidget {
             // 이미지
             ClipRRect(
               borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-              child: imageUrl.isNotEmpty
-                  ? Image.network(
-                      imageUrl,
-                      height: 160,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    )
-                  : Image.asset(
-                      'assets/images/huanhuan_no_image.png',
-                      height: 160,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
+              child: _buildImage(imageUrl),
             ),
             // 텍스트 내용
             Padding(
@@ -136,7 +202,9 @@ class ProductCard extends StatelessWidget {
                       Icon(Icons.place, size: 14, color: Colors.grey),
                       SizedBox(width: 4),
                       Text(
-                        region,
+                        region.isNotEmpty
+                            ? '${region['city'] ?? ''}, ${region['district'] ?? ''}'
+                            : '지역 정보 없음',
                         style: TextStyle(color: Colors.grey[600], fontSize: 13),
                       ),
                     ],
@@ -145,6 +213,19 @@ class ProductCard extends StatelessWidget {
                   Text(
                     '$price NTD',
                     style: TextStyle(color: Colors.blue, fontSize: 15),
+                  ),
+                  // Add Row for chat and like counts
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Icon(Icons.chat_bubble_outline, size: 14, color: Colors.grey),
+                      SizedBox(width: 4),
+                      Text('$chatCount', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      SizedBox(width: 12),
+                      Icon(Icons.favorite_border, size: 14, color: Colors.grey),
+                      SizedBox(width: 4),
+                      Text('$likeCount', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
                   ),
                 ],
               ),
@@ -169,6 +250,24 @@ class ProductCard extends StatelessWidget {
         return Colors.red;
       default:
         return Colors.grey;
+    }
+  }
+
+  Widget _buildImage(String imageUrl) {
+    if (imageUrl.isNotEmpty && imageUrl.startsWith('http')) {
+      return Image.network(
+        imageUrl,
+        height: 160,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    } else {
+      return Image.asset(
+        'assets/images/huanhuan_no_image.png',
+        height: 160,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
     }
   }
 }
@@ -206,6 +305,20 @@ class _ProductListScreenState extends State<ProductListScreen> {
     }
   }
 
+  Future<void> updateChatCountForProduct(String productId) async {
+    final chatRoomSnapshot = await FirebaseFirestore.instance
+        .collection('chatRooms')
+        .where('productId', isEqualTo: productId)
+        .get();
+
+    final chatCount = chatRoomSnapshot.docs.length;
+
+    await FirebaseFirestore.instance
+        .collection('products')
+        .doc(productId)
+        .update({'chats': chatCount});
+  }
+
   Future<void> _loadRegionProducts() async {
     final region = widget.region;
     if (region == null) {
@@ -215,7 +328,15 @@ class _ProductListScreenState extends State<ProductListScreen> {
         _products = [];
       });
       try {
-        final snap = await FirebaseFirestore.instance.collection('products').get();
+        final snap = await FirebaseFirestore.instance
+            .collection('products')
+            .orderBy('updatedAt', descending: true)
+            .get();
+        // Update chat count for each product
+        for (final doc in snap.docs) {
+          final productId = doc.id;
+          await updateChatCountForProduct(productId);
+        }
         print('📦 전체 상품 로드 완료: ${snap.docs.length}개');
         setState(() {
           _products = snap.docs;
@@ -230,17 +351,35 @@ class _ProductListScreenState extends State<ProductListScreen> {
     print('📦 특정 지역 상품 로딩 시작: $region');
     setState(() => _isLoading = true);
     try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final userDistrict = userDoc.data()?['region']?['district'];
+
+      if (userDistrict == null) {
+        print('❗ 사용자 지역 정보 없음');
+        setState(() => _isLoading = false);
+        return;
+      }
+
       final snap = await FirebaseFirestore.instance
           .collection('products')
-          .where('region', isEqualTo: region)
+          .where('region.district', isEqualTo: userDistrict)
+          .orderBy('updatedAt', descending: true)
           .get();
-      print('📦 $region 지역 상품 로드 완료: ${snap.docs.length}개');
+      // Update chat count for each product
+      for (final doc in snap.docs) {
+        final productId = doc.id;
+        await updateChatCountForProduct(productId);
+      }
+      print('📦 $userDistrict 지역 상품 로드 완료: ${snap.docs.length}개');
       setState(() {
         _products = snap.docs;
         _isLoading = false;
       });
     } catch (e) {
-      print('🔥 $region 지역 상품 로딩 중 오류 발생: $e');
+      print('🔥 지역 기반 상품 로딩 중 오류 발생: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -322,7 +461,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
     }
 
     final recommended = scoredProducts.map((e) => e['doc'] as DocumentSnapshot).toList();
-
     print('📊 점수 기반 추천 상품 ${recommended.length}개 로드 완료');
     return recommended;
   }
@@ -351,158 +489,32 @@ class _ProductListScreenState extends State<ProductListScreen> {
           }).toList()
         : widget.recommendedProducts;
 
-    // Filter _products if showOnlyAvailable is true
+    // Filter _products if showOnlyAvailable is true, and exclude empty or deleted documents
     final filteredProducts = widget.showOnlyAvailable
         ? _products.where((product) {
+            if (!product.exists || product.data() == null || (product.data() as Map<String, dynamic>).isEmpty) return false;
             final productData = product.data() as Map<String, dynamic>;
             final saleStatus = productData['saleStatus'] ?? '';
             return saleStatus != 'reserved' && saleStatus != 'soldout';
           }).toList()
-        : _products;
+        : _products.where((product) {
+            return product.exists && product.data() != null && (product.data() as Map<String, dynamic>).isNotEmpty;
+          }).toList();
 
     return Scaffold(
       body: Container(
         color: Color(0xFFEAF6FF),
         child: ListView(
           children: [
-            if (filteredRecommended != null && filteredRecommended.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Text('For you', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-              ...filteredRecommended.map((doc) {
-                final data = doc.data() as Map<String, dynamic>;
-                final title = data['title'] ?? '';
-                final condition = data['condition'] ?? '';
-                final price = data['price'].toString();
-                final imageUrl = (data['imageUrl'] ?? '').toString();
-                final region = data['region'] ?? 'Unknown';
-                final saleStatus = data['saleStatus'] ?? '';
-                final productId = doc.id;
-                final description = data['description'] ?? '';
-                final sellerEmail = data['sellerEmail'] ?? '';
-                final sellerUid = data['sellerUid'] ?? '';
-                final timestampValue = data['timestamp'];
-                final String timestampString = (timestampValue is Timestamp)
-                    ? timestampValue.toDate().toString()
-                    : '';
-
-                return GestureDetector(
-                  onTap: () async {
-                    final user = FirebaseAuth.instance.currentUser;
-                    if (user != null) {
-                      await FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(user.uid)
-                          .collection('clickedProducts')
-                          .doc(productId)
-                          .set({'clickedAt': Timestamp.now()});
-                    }
-
-                    print('🟢 Product clicked: $title / $productId / $sellerUid');
-                    print('📸 imageUrl = "$imageUrl"');
-
-                    if (productId.isEmpty || title.isEmpty || sellerUid.isEmpty) {
-                      print('⚠️ 필수 데이터 누락. 이동 중단.');
-                      return;
-                    }
-
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ProductDetailScreen(
-                          productId: productId,
-                          title: title,
-                          price: price,
-                          description: description,
-                          imageUrl: imageUrl,
-                          timestamp: timestampString,
-                          sellerEmail: sellerEmail,
-                          chatRoomId: '',
-                          userName: sellerEmail,
-                          sellerUid: sellerUid,
-                          productTitle: title,
-                          productImageUrl: imageUrl,
-                          productPrice: price,
-                        ),
-                      ),
-                    );
-                    setState(() {});
-                  },
-                  child: ProductCard(
-                    title: title,
-                    imageUrl: imageUrl,
-                    price: price,
-                    region: region,
-                    saleStatus: saleStatus,
-                    condition: condition,
-                  ),
-                );
-              }).toList(),
-            ],
-            ...List.generate(filteredProducts.length, (index) {
-              final product = filteredProducts[index];
-              final productData = product.data() as Map<String, dynamic>;
-
-              final timestampValue = productData['timestamp'];
-              final String timestampString = (timestampValue is Timestamp)
-                  ? timestampValue.toDate().toString()
-                  : '';
-
-              final String productId = productData['productId'] ?? product.id;
-              final String title = productData['title'] ?? '';
-              final String condition = productData['condition'] ?? '';
-              final String price = productData['price'].toString();
-              final String imageUrl = productData['imageUrl'] ?? 'assets/images/huanhuan_no_image.png';
-              final String description = productData['description'] ?? '';
-              final String sellerEmail = productData['sellerEmail'] ?? '';
-              final String sellerUid = productData['sellerUid'] ?? '';
-              final String region = productData['region'] ?? 'Unknown';
-              final String saleStatus = productData['saleStatus'] ?? '';
-
-              return GestureDetector(
-                onTap: () async {
-                  final user = FirebaseAuth.instance.currentUser;
-                  if (user != null) {
-                    await FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(user.uid)
-                        .collection('clickedProducts')
-                        .doc(productId)
-                        .set({'clickedAt': Timestamp.now()});
-                  }
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProductDetailScreen(
-                        productId: productId,
-                        title: title,
-                        price: price,
-                        description: description,
-                        imageUrl: imageUrl,
-                        timestamp: timestampString,
-                        sellerEmail: sellerEmail,
-                        chatRoomId: '',
-                        userName: sellerEmail,
-                        sellerUid: sellerUid,
-                        productTitle: title,
-                        productImageUrl: imageUrl,
-                        productPrice: price,
-                      ),
-                    ),
-                  );
-                  setState(() {});
-                },
-                child: ProductCard(
-                  title: title,
-                  imageUrl: imageUrl,
-                  price: price,
-                  region: region,
-                  saleStatus: saleStatus,
-                  condition: condition,
-                ),
-              );
-            }),
+            // 추천 알고리즘은 나중에 손 볼 예정
+            // if (filteredRecommended != null && filteredRecommended.isNotEmpty) ...[
+            //   Padding(
+            //     padding: const EdgeInsets.all(12.0),
+            //     child: Text('For you', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            //   ),
+            //   ...filteredRecommended.map((doc) => buildProductCard(context, doc, _loadRegionProducts)).toList(),
+            // ],
+            ...filteredProducts.map((product) => buildProductCard(context, product, _loadRegionProducts)).toList(),
           ],
         ),
       ),

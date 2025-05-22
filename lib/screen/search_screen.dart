@@ -191,19 +191,25 @@ class SearchResultScreen extends StatelessWidget {
           itemBuilder: (context, index) {
             final product = results[index];
             final productData = product.data() as Map<String, dynamic>;
-
+            final Map<String, dynamic> regionMap = productData['region'] is Map<String, dynamic> ? productData['region'] as Map<String, dynamic> : {};
             final String title = productData['title'] ?? '';
-            final String imageUrl = (productData['imageUrl'] ?? '').toString();
+            final List<String> imageUrls = List<String>.from(productData['imageUrls'] ?? []);
+            final String imageUrl = imageUrls.isNotEmpty ? imageUrls.first : '';
             final String price = productData['price']?.toString() ?? '';
-            final String region = productData['region'] ?? '';
+            // region is now a Map<String, dynamic>
             final String saleStatus = productData['saleStatus'] ?? '';
+            final int likeCount = (productData['likes'] ?? 0) is int ? productData['likes'] : 0;
+            final int chatCount = (productData['chats'] ?? 0) is int ? productData['chats'] : 0;
 
             return ProductCard(
               title: title,
               imageUrl: imageUrl,
               price: price,
-              region: region,
+              region: regionMap,
               saleStatus: saleStatus,
+              condition: '',
+              likeCount: likeCount,
+              chatCount: chatCount,
               onTap: () {
                 final timestampValue = productData['timestamp'];
                 final String timestampString = (timestampValue is Timestamp)
@@ -241,13 +247,15 @@ class SearchResultScreen extends StatelessWidget {
                         productTitle: title,
                         productImageUrl: imageUrl,
                         productPrice: price,
+                        region: regionMap,
+                        imageUrls: List<String>.from(productData['imageUrls'] ?? []),
                       ),
                     ),
                   );
                 } catch (e) {
                   print('❌ Navigator.push failed: $e');
                 }
-              }, condition: '',
+              },
             );
           },
         ),

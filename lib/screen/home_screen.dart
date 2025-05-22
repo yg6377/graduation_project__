@@ -27,18 +27,67 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   String? _selectedRegion;
   bool _showOnlyAvailable = false;
+  bool _isLoadingRegion = false;
 
   @override
   void initState() {
     super.initState();
     _loadUserRegion();
+    _checkRegionAfterLogin();
+  }
+
+  void _checkRegionAfterLogin() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final region = doc.data()?['region'];
+    if (region == null || (region is String && region.trim().isEmpty)) {
+      Future.microtask(() {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Verify your region!'),
+            content: Text('Please verify your region to continue using the app.'),
+            actions: [
+              TextButton(
+                child: Text('Go'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.pushNamed(context, '/changeRegion').then((result) {
+                    if (result == true) {
+                      _loadUserRegion();
+                    }
+                  });
+                },
+              ),
+            ],
+          ),
+        );
+      });
+    }
   }
 
   Future<void> _loadUserRegion() async {
+    setState(() => _isLoadingRegion = true);
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
+    if (uid == null) {
+      setState(() => _isLoadingRegion = false);
+      return;
+    }
     final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    setState(() => _selectedRegion = doc.data()?['region']);
+    final district = doc.data()?['region']?['district'];
+
+    if (district != null) {
+      // " District" 문자열 제거
+      final cleaned = district.replaceAll(' District', '').trim();
+      setState(() {
+        _selectedRegion = cleaned;
+        _isLoadingRegion = false;
+      });
+    } else {
+      setState(() => _isLoadingRegion = false);
+    }
   }
 
   Future<void> _changeRegion(String? region) async {
@@ -68,10 +117,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      ProductListScreen(
-        region: _selectedRegion,
-        showOnlyAvailable: _showOnlyAvailable,
-      ),
+      // Placeholder; body will be handled below for index 0
+      null,
       ChatListScreen(),
       MyPageScreen(),
     ];
@@ -83,51 +130,57 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Color(0xFFEAF6FF),
         title: _selectedIndex == 0
             ? Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(
-              child: GestureDetector(
-                onTap: () async {
-                  final selected = await showDialog<String>(
-                    context: context,
-                    builder: (_) => SimpleDialog(
-                      title: Text('Select Region'),
-                      children: [
-                        for (final r in [
-                          'Danshui', 'Taipei', 'New Taipei',
-                          'Kaohsiung', 'Taichung', 'Tainan',
-                          'Hualien', 'Keelung', 'Taoyuan', 'Hsinchu',
-                        ])
-                          SimpleDialogOption(
-                            onPressed: () => Navigator.pop(context, r),
-                            child: Text(r),
-                          ),
-                      ],
-                    ),
-                  );
-                  await _changeRegion(selected);
-                },
-                child: Row(
-                  children: [
-                    Text(
-                      _selectedRegion ?? '<None>',
-                      style: TextStyle(
-                        color: Color(0xFF3B82F6),
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+            Row(
+              children: [
+                Icon(Icons.location_on, color: Color(0xFF3B82F6), size: 20),
+                SizedBox(width: 4),
+                _isLoadingRegion
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFF3B82F6),
+                        ),
+                      )
+                    : Text(
+                        _selectedRegion ?? 'Need Verify',
+                        style: TextStyle(
+                          color: Color(0xFF3B82F6),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    Icon(Icons.arrow_drop_down, color: Color(0xFF3B82F6)),
-                  ],
-                ),
-              ),
+              ],
             ),
-            Text('Available Only',
-                style: TextStyle(color: Color(0xFF3B82F6))),
-            Checkbox(
-              value: _showOnlyAvailable,
-              onChanged: (v) =>
-                  setState(() => _showOnlyAvailable = v ?? false),
-              activeColor: Color(0xFF3B82F6),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              decoration: BoxDecoration(
+                border: Border.all(color: Color(0xFF3B82F6)),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Available Only',
+                    style: TextStyle(
+                      color: Color(0xFF3B82F6),
+                      fontSize: 13,
+                    ),
+                  ),
+                  Checkbox(
+                    value: _showOnlyAvailable,
+                    onChanged: (v) =>
+                        setState(() => _showOnlyAvailable = v ?? false),
+                    activeColor: Color(0xFF3B82F6),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              ),
             ),
           ],
         )
@@ -138,15 +191,51 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icon(Icons.search, color: Color(0xFF3B82F6)),
               onPressed: () => Navigator.pushNamed(context, '/search'),
             ),
-            IconButton(
-              icon: Icon(Icons.notifications, color: Color(0xFF3B82F6)),
-              onPressed: () => Navigator.pushNamed(context, '/notification'),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(FirebaseAuth.instance.currentUser?.uid)
+                  .collection('notifications')
+                  .where('read', isEqualTo: false)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                final hasUnread = snapshot.hasData && snapshot.data!.docs.isNotEmpty;
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.notifications, color: Color(0xFF3B82F6)),
+                      onPressed: () => Navigator.pushNamed(context, '/notification'),
+                    ),
+                    if (hasUnread)
+                      Positioned(
+                        right: 8,
+                        bottom: 8,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           ],
         ],
         elevation: 0,
       ),
-      body: pages[_selectedIndex],
+      body: _selectedIndex == 0
+          ? ((_selectedRegion == null || _isLoadingRegion)
+              ? Center(child: CircularProgressIndicator())
+              : ProductListScreen(
+                  region: _selectedRegion,
+                  showOnlyAvailable: _showOnlyAvailable,
+                ))
+          : pages[_selectedIndex],
       bottomNavigationBar: Card(
         elevation: 4,
         margin: EdgeInsets.zero,
@@ -219,6 +308,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: Color(0xFF0277BD),
         heroTag: 'uploadProduct',
         onPressed: () => Navigator.push(
           context,

@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:graduation_project_1/screen/edit_profile_screen.dart';
 import 'package:graduation_project_1/screen/myposts_screen.dart';
 import 'package:graduation_project_1/screen/favoritelist_screen.dart';
+import 'package:graduation_project_1/screen/ChangeRegionScreen.dart';
 
 class MyPageScreen extends StatefulWidget {
 
@@ -48,6 +49,20 @@ class _MyPageScreenState extends State<MyPageScreen> {
         .collection('likedProducts')
         .where('userId', isEqualTo: _currentUser?.uid)
         .snapshots();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    await user?.reload();
+    final updatedUser = FirebaseAuth.instance.currentUser;
+    final doc = await FirebaseFirestore.instance.collection('users').doc(updatedUser!.uid).get();
+    if (doc.exists) {
+      final data = doc.data()!;
+      setState(() {
+        _nicknameController.text = updatedUser.displayName ?? '';
+        updatedUser.updatePhotoURL(data['profileImageUrl']);
+      });
+    }
   }
 
   @override
@@ -99,27 +114,69 @@ class _MyPageScreenState extends State<MyPageScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                _currentUser?.displayName ?? 'No nickname',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.blueGrey[900],
-                                  fontFamily: CupertinoTheme.of(context).textTheme.textStyle.fontFamily,
-                                ),
+                              Row(
+                                children: [
+                                  Text(
+                                    _currentUser?.displayName ?? 'No nickname',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.blueGrey[900],
+                                      fontFamily: CupertinoTheme.of(context).textTheme.textStyle.fontFamily,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  FutureBuilder<QuerySnapshot>(
+                                    future: FirebaseFirestore.instance
+                                        .collection('users')
+                                        .doc(_currentUser?.uid)
+                                        .collection('reviews')
+                                        .get(),
+                                    builder: (context, snapshot) {
+                                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                                        return Text("(0.0 ★)", style: TextStyle(fontSize: 16, color: Colors.grey[600]));
+                                      }
+                                      final reviews = snapshot.data!.docs;
+                                      double avg = reviews
+                                          .map((doc) => (doc.data() as Map<String, dynamic>)['rating'] ?? 0.0)
+                                          .fold(0.0, (a, b) => a + b) /
+                                          reviews.length;
+                                      return Text("(${avg.toStringAsFixed(1)} ★)", style: TextStyle(fontSize: 16, color: Colors.orange[800]));
+                                    },
+                                  ),
+                                ],
                               ),
                               SizedBox(height: 6),
                               FutureBuilder<DocumentSnapshot>(
                                 future: FirebaseFirestore.instance.collection('users').doc(_currentUser?.uid).get(),
                                 builder: (context, snapshot) {
                                   if (snapshot.connectionState == ConnectionState.waiting) {
-                                    return Text("Your Location: ...", style: TextStyle(fontSize: 14, color: Colors.blueGrey));
+                                    return Row(
+                                      children: [
+                                        Icon(Icons.location_on, color: Colors.blueGrey, size: 16),
+                                        SizedBox(width: 4),
+                                        Text("...", style: TextStyle(fontSize: 14, color: Colors.blueGrey)),
+                                      ],
+                                    );
                                   }
+                                  String regionText = "Unknown";
                                   if (snapshot.hasData && snapshot.data!.exists) {
                                     final region = snapshot.data!.get('region');
-                                    return Text("Your Location: $region", style: TextStyle(fontSize: 14, color: Colors.blueGrey));
+                                    if (region is Map<String, dynamic>) {
+                                      final city = (region['city'] ?? '').toString().replaceAll(' City', '');
+                                      final district = (region['district'] ?? '').toString().replaceAll(' District', '');
+                                      regionText = '$city, $district';
+                                    } else {
+                                      regionText = region.toString();
+                                    }
                                   }
-                                  return Text("Your Location: Unknown", style: TextStyle(fontSize: 14, color: Colors.blueGrey));
+                                  return Row(
+                                    children: [
+                                      Icon(Icons.location_on, color: Colors.blueGrey, size: 16),
+                                      SizedBox(width: 4),
+                                      Text(regionText, style: TextStyle(fontSize: 14, color: Colors.blueGrey)),
+                                    ],
+                                  );
                                 },
                               ),
                               SizedBox(height: 18),
@@ -136,9 +193,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
                                           MaterialPageRoute(builder: (context) => EditProfileScreen()),
                                         );
                                         if (result == true) {
-                                          setState(() {
-                                            _nicknameController.text = FirebaseAuth.instance.currentUser?.displayName ?? '';
-                                          });
+                                          await _loadUserData();
                                         }
                                       },
                                       child: Text(
@@ -300,7 +355,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
                     stream: FirebaseFirestore.instance
                         .collection('users')
                         .doc(_currentUser?.uid)
-                        .collection('review')
+                        .collection('reviews')
                         .orderBy('timestamp', descending: true)
                         .snapshots(),
                     builder: (context, snapshot) {
@@ -314,32 +369,48 @@ class _MyPageScreenState extends State<MyPageScreen> {
                         children: snapshot.data!.docs.map((doc) {
                           final data = doc.data() as Map<String, dynamic>;
                           return Card(
-                            margin: EdgeInsets.symmetric(vertical: 6),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            elevation: 2,
-                            child: ListTile(
-                              title: Text(
-                                data['fromNickname'] ?? 'Unknown',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  SizedBox(height: 4),
-                                  Text(data['comment'] ?? ''),
-                                  SizedBox(height: 4),
-                                  Row(
-                                    children: List.generate(5, (index) {
-                                      return Icon(
-                                        index < (data['rating'] ?? 0)
-                                            ? Icons.star
-                                            : Icons.star_border,
-                                        color: Colors.amber,
-                                        size: 20,
-                                      );
-                                    }),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              side: BorderSide(color: Color(0xFFB6DBF8), width: 1),
+                            ),
+                            shadowColor: Colors.transparent,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Color(0xFFB6DBF8), width: 1),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Color(0xFFB6DBF8).withOpacity(0.3),
+                                    blurRadius: 6,
+                                    offset: Offset(0, 3),
                                   ),
                                 ],
+                              ),
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      data['nickname'] ?? 'Unknown',
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    ),
+                                    SizedBox(height: 6),
+                                    Text(data['comment'] ?? '', style: TextStyle(fontSize: 14)),
+                                    SizedBox(height: 8),
+                                    Row(
+                                      children: List.generate(5, (index) {
+                                        return Icon(
+                                          index < (data['rating'] ?? 0) ? Icons.star : Icons.star_border,
+                                          color: Colors.amber,
+                                          size: 20,
+                                        );
+                                      }),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           );
@@ -355,4 +426,4 @@ class _MyPageScreenState extends State<MyPageScreen> {
       ),
     );
   }
-}
+  }

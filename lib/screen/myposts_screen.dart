@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:graduation_project_1/screen/productlist_screen.dart';
-import 'ProductDetailScreen.dart'; // Replace with your actual import path
+import 'ProductDetailScreen.dart';
 
 class MyPostsScreen extends StatelessWidget {
   const MyPostsScreen({super.key});
@@ -42,10 +42,24 @@ class MyPostsScreen extends StatelessWidget {
               final condition = data['condition'] ?? '';
               final title = data['title'] ?? '';
               final displayTitle = title;
-              final imageUrl = data['imageUrl'] ?? '';
+              final imageUrls = data['imageUrls'];
+              final imageUrl = (imageUrls != null && imageUrls.isNotEmpty)
+                  ? imageUrls.first.toString()
+                  : ((data['imageUrl'] ?? '').toString().isNotEmpty
+                  ? data['imageUrl']
+                  : 'assets/images/huanhuan_no_image.png');
               final price = data['price']?.toString() ?? '';
               final nickname = data['userName'] ?? '';
-              final region = data['region'] ?? '';
+              final dynamic regionField = data['region'];
+              Map<String, dynamic> region;
+              if (regionField is Map<String, dynamic>) {
+                region = regionField;
+              } else if (regionField is String) {
+                region = {'city': regionField, 'district': ''};
+              } else {
+                region = {};
+              }
+
               final saleStatus = data['saleStatus'] ?? '';
               final timestamp = data['timestamp']?.toDate();
 
@@ -65,37 +79,110 @@ class MyPostsScreen extends StatelessWidget {
                 }
               }
 
-              return GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProductDetailScreen(
-                        productId: posts[index].id,
-                        title: displayTitle,
-                        price: price,
-                        description: data['description'] ?? '',
-                        imageUrl: imageUrl,
-                        timestamp: formattedTime,
-                        sellerUid: data['sellerUid'] ?? '',
-                        sellerEmail: data['sellerUid'] ?? '',
-                        chatRoomId: '',
-                        userName: nickname,
-                        productTitle: title,
-                        productImageUrl: imageUrl,
-                        productPrice: price,
+              final updatedAt = (data['updatedAt'] as Timestamp?)?.toDate();
+              bool showBump = false;
+              if (updatedAt != null) {
+                final durationSinceUpdate = DateTime.now().difference(updatedAt);
+                showBump = durationSinceUpdate.inHours >= 24;
+              }
+
+              return FutureBuilder<QuerySnapshot>(
+                future: FirebaseFirestore.instance
+                    .collection('products')
+                    .doc(posts[index].id)
+                    .collection('likes')
+                    .get(),
+                builder: (context, likeSnapshot) {
+                  final likeCount = likeSnapshot.hasData ? likeSnapshot.data!.docs.length : 0;
+
+                  return Stack(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ProductDetailScreen(
+                                productId: posts[index].id,
+                                title: displayTitle,
+                                price: price,
+                                description: data['description'] ?? '',
+                                imageUrl: imageUrl,
+                                timestamp: formattedTime,
+                                sellerUid: data['sellerUid'] ?? '',
+                                sellerEmail: data['sellerUid'] ?? '',
+                                chatRoomId: '',
+                                userName: nickname,
+                                productTitle: title,
+                                productImageUrl: (data['imageUrls'] != null && data['imageUrls'].isNotEmpty)
+                                    ? data['imageUrls'].first.toString()
+                                    : ((data['imageUrl'] ?? '').toString().isNotEmpty
+                                        ? data['imageUrl']
+                                        : 'assets/images/huanhuan_no_image.png'),
+                                productPrice: price,
+                                region: region,
+                                imageUrls: List<String>.from(data['imageUrls'] ?? []),
+                              ),
+                            ),
+                          );
+                        },
+                        child: ProductCard(
+                          title: displayTitle,
+                          imageUrl: imageUrl,
+                          price: price,
+                          region: region,
+                          saleStatus: saleStatus,
+                          condition: condition,
+                          chatCount: (data['chats'] ?? 0) is int ? data['chats'] : 0,
+                          likeCount: likeCount,
+                        ),
                       ),
-                    ),
+                      if (showBump)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: GestureDetector(
+                            onTap: () async {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: Text('Do you want to bump this post to the top?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, false),
+                                      child: Text('No'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      child: Text('Yes'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirm == true) {
+                                await FirebaseFirestore.instance
+                                    .collection('products')
+                                    .doc(posts[index].id)
+                                    .update({'updatedAt': FieldValue.serverTimestamp()});
+                              }
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                border: Border.all(color: Colors.blue),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Bump',
+                                style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   );
                 },
-                child: ProductCard(
-                  title: displayTitle,
-                  imageUrl: imageUrl,
-                  price: price,
-                  region: region,
-                  saleStatus: saleStatus,
-                  condition: condition,
-                ),
               );
             },
           );

@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:graduation_project_1/screen/ChangeRegionScreen.dart';
 
 class EditProfileScreen extends StatefulWidget {
   @override
@@ -17,12 +18,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   File? _profileImage;
   final ImagePicker _picker = ImagePicker();
   String? _profileImageUrlFromDB;
-  String? _selectedRegion;
-
-  final List<String> _regions = [
-    'Taipei', 'New Taipei', 'Danshui', 'Keelung', 'Taoyuan',
-    'Hsinchu', 'Taichung', 'Kaohsiung', 'Tainan', 'Hualien'
-  ];
+  String? _savedRegion;
 
   @override
   void initState() {
@@ -47,7 +43,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             _profileImageUrlFromDB = data['profileImageUrl'];
           }
           if (data['region'] != null) {
-            _selectedRegion = data['region'];
+            if (data['region'] is Map && data['region']['city'] != null && data['region']['district'] != null) {
+              _savedRegion = '${data['region']['city']}, ${data['region']['district']}';
+            }
           }
           setState(() {});
         }
@@ -75,6 +73,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             .child('${_currentUser!.uid}.jpg');
         await ref.putFile(_profileImage!);
         imageUrl = await ref.getDownloadURL();
+        if (imageUrl != null) {
+          await _currentUser!.updatePhotoURL(imageUrl);
+        }
       }
 
       // Update Firestore
@@ -84,17 +85,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           .update({
         'nickname': newNickname,
         if (imageUrl != null) 'profileImageUrl': imageUrl,
-        if (_selectedRegion != null) 'region': _selectedRegion,
+// no update to 'region' as it's managed separately
       });
 
-      if (_selectedRegion != null) {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .get();
+
+      final regionData = userDoc.data()?['region'];
+      if (regionData is Map<String, dynamic>) {
         final userProducts = await FirebaseFirestore.instance
             .collection('products')
             .where('sellerUid', isEqualTo: _currentUser!.uid)
             .get();
 
         for (final doc in userProducts.docs) {
-          await doc.reference.update({'region': _selectedRegion});
+          await doc.reference.update({'region': regionData});
         }
       }
 
@@ -103,6 +110,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (imageUrl != null) {
         await _currentUser!.updatePhotoURL(imageUrl);
       }
+
+      // Immediately update local state so UI reflects changes
+      setState(() {
+        _profileImageUrlFromDB = imageUrl ?? _profileImageUrlFromDB;
+        _nicknameController.text = newNickname;
+      });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -113,59 +126,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  void _showRegionPicker() {
-    final initialIndex = _selectedRegion != null ? _regions.indexOf(_selectedRegion!) : 0;
-    showCupertinoModalPopup(
-      context: context,
-      builder: (_) => Container(
-        height: 250,
-        color: CupertinoColors.systemBackground.resolveFrom(context),
-        child: Column(
-          children: [
-            SizedBox(
-              height: 40,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  CupertinoButton(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('Cancel'),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                  CupertinoButton(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('Done'),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: CupertinoPicker(
-                backgroundColor: CupertinoColors.systemBackground.resolveFrom(context),
-                scrollController: FixedExtentScrollController(initialItem: initialIndex),
-                itemExtent: 32,
-                onSelectedItemChanged: (index) {
-                  setState(() {
-                    _selectedRegion = _regions[index];
-                  });
-                },
-                children: _regions.map((region) => Center(child: Text(region))).toList(),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: Text('Edit Profile'),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Edit Profile'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0.5,
       ),
-      child: SafeArea(
+      body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Column(
@@ -181,68 +151,68 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           ? NetworkImage(_profileImageUrlFromDB!)
                           : (_currentUser?.photoURL != null
                               ? NetworkImage(_currentUser!.photoURL!)
-                              : AssetImage('assets/default_avatar.png') as ImageProvider)),
+                              : AssetImage('assets/images/default_profile.png') as ImageProvider)),
                 ),
               ),
               SizedBox(height: 24),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Nickname', style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(fontSize: 16)),
+                child: Text('Nickname', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
               ),
               SizedBox(height: 8),
-              CupertinoTextField(
+              TextField(
                 controller: _nicknameController,
-                placeholder: 'Enter new nickname',
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                decoration: BoxDecoration(
-                  color: CupertinoColors.systemGrey6.resolveFrom(context),
-                  borderRadius: BorderRadius.circular(8),
+                decoration: InputDecoration(
+                  hintText: 'Enter new nickname',
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                 ),
               ),
               SizedBox(height: 24),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Region', style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(fontSize: 16)),
-              ),
-              SizedBox(height: 8),
-              GestureDetector(
-                onTap: _showRegionPicker,
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: CupertinoColors.systemGrey6.resolveFrom(context),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: CupertinoColors.systemGrey.resolveFrom(context),
-                      width: 0.5,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'My Region',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                     ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        _selectedRegion ?? 'Select a region',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: _selectedRegion == null
-                              ? CupertinoColors.placeholderText
-                              : CupertinoColors.label,
-                        ),
-                      ),
-                      Icon(
-                        CupertinoIcons.chevron_down,
-                        color: CupertinoColors.systemGrey,
-                        size: 20,
-                      ),
-                    ],
-                  ),
+                    SizedBox(height: 8),
+                    Text(
+                      _savedRegion ?? 'None',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ],
                 ),
+              ),
+              SizedBox(height: 16),
+              OutlinedButton(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ChangeRegionScreen()),
+                  );
+                  if (result == true) {
+                    await _loadProfileData();
+                  }
+                },
+                child: Text('Change Location'),
               ),
               SizedBox(height: 32),
-              CupertinoButton(
-                color: Color(0xFF3B82F6),
-                onPressed: _saveProfile,
-                child: Text('Save'),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF3B82F6),
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: _saveProfile,
+                  child: Text('Save'),
+                ),
               ),
             ],
           ),

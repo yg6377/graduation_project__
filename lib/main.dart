@@ -5,7 +5,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:another_flushbar/flushbar.dart';
+import 'package:graduation_project_1/screen/ChangeRegionScreen.dart';
+import 'package:graduation_project_1/screen/chatlist_Screen.dart';
+import 'package:graduation_project_1/screen/chatroom_screen.dart';
 import 'firebase_options.dart';
 import 'screen/login_screen.dart';
 import 'screen/signup_screen.dart';
@@ -50,9 +52,9 @@ Future<void> _saveDeviceToken() async {
   final token = await FirebaseMessaging.instance.getToken();
   if (user != null && token != null) {
     await FirebaseFirestore.instance
-        .collection('deviceTokens')
+        .collection('users')
         .doc(user.uid)
-        .set({'fcmToken': token});
+        .update({'fcmToken': token});
   }
 }
 
@@ -60,91 +62,73 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // 로컬 알림 초기화
-  const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-  await localNotifications.initialize(
-    const InitializationSettings(android: androidInit),
-    onDidReceiveNotificationResponse: (response) {
-      // 알림 클릭 처리
-      debugPrint('🔔 Notification clicked: ${response.payload}');
-      navigatorKey.currentState?.pushNamed('/notification');
-    },
-  );
-
-  // Android Notification Channel 생성
-  if (Platform.isAndroid) {
-    final channel = AndroidNotificationChannel(
-      'chat_channel',
-      'Chat Notifications',
-      importance: Importance.high,
-      description: '채팅 알림 채널',
-    );
-
-    await localNotifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
-  }
-
-  // Firebase Messaging 설정
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // 알림 권한 요청
-  final settings = await FirebaseMessaging.instance.requestPermission();
-  if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-    debugPrint('✅ Notification permission granted');
-  } else {
-    debugPrint('⚠️ Notification permission declined');
-  }
+  const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const InitializationSettings initSettings = InitializationSettings(android: androidSettings);
+  await localNotifications.initialize(initSettings);
 
-  // 로그인 상태 감지 후 토큰 저장
-  FirebaseAuth.instance.authStateChanges().listen((user) {
-    if (user != null) {
-      _saveDeviceToken();
-    }
-  });
-
-  // 포그라운드 메시지 수신
-  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    debugPrint('🔥 Foreground message received');
-    _showLocalNotification(message);
-
-    final notification = message.notification;
-    if (notification != null && navigatorKey.currentContext != null) {
-      Flushbar(
-        title: notification.title,
-        message: notification.body,
-        duration: const Duration(seconds: 3),
-        flushbarPosition: FlushbarPosition.TOP,
-        margin: const EdgeInsets.all(8),
-        borderRadius: BorderRadius.circular(8),
-      ).show(navigatorKey.currentContext!);
-    }
-  });
-
-  runApp(const MyApp());
+  runApp(const AppRoot());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class AppRoot extends StatelessWidget {
+  const AppRoot({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Graduation Project',
       navigatorKey: navigatorKey,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: FutureBuilder<User?>(
+        future: FirebaseAuth.instance.authStateChanges().first,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          }
+
+          final user = snapshot.data;
+          if (user != null) {
+            // 로그인된 경우 fcmToken 저장
+            FirebaseMessaging.instance.getToken().then((token) {
+              if (token != null) {
+                FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(user.uid)
+                    .update({'fcmToken': token});
+                FirebaseMessaging.instance.subscribeToTopic('all');
+              }
+            });
+
+            // 포그라운드 메시지 수신
+            FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+              _showLocalNotification(message);
+            });
+
+            return const HomeScreen();
+          } else {
+            return const LoginScreen();
+          }
+        },
       ),
-      initialRoute: '/login',
       routes: {
         '/login': (_) => const LoginScreen(),
         '/signup': (_) => const SignUpScreen(),
         '/home': (_) => const HomeScreen(),
         '/search': (_) => const SearchScreen(),
         '/notification': (_) => const NotificationCenterScreen(),
+        '/changeRegion': (_) => const ChangeRegionScreen(),
+        '/chatlist': (_) => const ChatListScreen(),
+        '/chatRoom': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          return ChatRoomScreen(
+            chatRoomId: args['chatRoomId'],
+            userName: args['userName'],
+            saleStatus: args['saleStatus'],
+          );
+        },
       },
-      debugShowCheckedModeBanner: false,
     );
   }
 }
-
-
