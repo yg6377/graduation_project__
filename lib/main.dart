@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:another_flushbar/flushbar.dart';
 import 'package:graduation_project_1/screen/ChangeRegionScreen.dart';
+import 'package:graduation_project_1/screen/chatlist_Screen.dart';
 import 'package:graduation_project_1/screen/chatroom_screen.dart';
 import 'firebase_options.dart';
 import 'screen/login_screen.dart';
@@ -124,6 +125,11 @@ Future<void> main() async {
     }
   });
 
+  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    debugPrint('📨 Notification opened from background: ${message.data}');
+    navigatorKey.currentState?.pushNamed('/chatlist');
+  });
+
   runApp(const MyApp());
 }
 
@@ -145,6 +151,7 @@ class MyApp extends StatelessWidget {
         '/search': (_) => const SearchScreen(),
         '/notification': (_) => const NotificationCenterScreen(),
         '/changeRegion': (_) => const ChangeRegionScreen(),
+        '/chatlist' : (_) => const ChatListScreen(),
         '/chatRoom': (context) {
           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
           return ChatRoomScreen(

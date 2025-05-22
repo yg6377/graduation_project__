@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:another_flushbar/flushbar.dart';
 import 'ProductDetailScreen.dart';
 import 'package:graduation_project_1/screen/reviewForm.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class ChatBubbleClipperLeft extends CustomClipper<Path> {
   @override
@@ -193,19 +195,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       'unreadCounts.$otherUid': FieldValue.increment(1),
     });
 
+    // FCM 알림은 Firestore에 메시지를 추가하면 Firebase Functions에서 자동으로 전송됩니다.
+
     _messageController.clear();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.jumpTo(
           _scrollController.position.maxScrollExtent,
-
         );
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.jumpTo(0);  // reverse:true 면 0이 최신 메시지 위치
-
       }
     });
   }
