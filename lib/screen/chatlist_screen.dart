@@ -111,6 +111,25 @@ class ChatListScreen extends StatelessWidget {
                   return Dismissible(
                     key: ValueKey(doc.id),
                     direction: DismissDirection.endToStart,
+                    confirmDismiss: (_) async {
+                      return await showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: Text('Leave Chat'),
+                          content: Text('Are you sure you want to leave this chat?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              child: Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              child: Text('Leave'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                     onDismissed: (_) async {
                       final chatRoomRef = FirebaseFirestore.instance.collection('chatRooms').doc(doc.id);
                       await chatRoomRef.set({
