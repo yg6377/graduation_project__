@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // 추가된 import
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 
@@ -19,6 +20,10 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text,
         password: _passwordController.text,
       );
+      final token = await FirebaseMessaging.instance.getToken();
+      await FirebaseFirestore.instance.collection('users')
+          .doc(credential.user!.uid)
+          .update({'fcmToken': token});
       Navigator.pushReplacementNamed(context, '/home'); // 홈 화면으로 이동
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -29,12 +34,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
   /// 자동 로그인 (이전에 로그인한 계정 사용)
   Future<void> autoLogin() async {
-    final user = FirebaseAuth.instance.currentUser; // 자동 로그인 시 컬렉션에 UID 추가
+    final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      final token = await FirebaseMessaging.instance.getToken();
+      await FirebaseFirestore.instance.collection('users')
+          .doc(user.uid)
+          .update({'fcmToken': token});
       Navigator.pushReplacementNamed(context, '/home');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('unable to auto login, login first!')),
+        const SnackBar(content: Text('Unable to auto-login. Please log in first!')),
       );
     }
   }

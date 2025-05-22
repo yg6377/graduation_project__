@@ -186,6 +186,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     await chatRef.collection('message').add({
       'text': text,
       'sender': _currentUser!.uid,
+      'receiver': otherUid,
       'timestamp': FieldValue.serverTimestamp(),
     });
 
