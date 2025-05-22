@@ -486,19 +486,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    icon: Icon(Icons.mode_comment_outlined, size: 30),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ProductCommentsScreen(
-                            productId: widget.productId,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                  // 📴 Comment feature temporarily disabled
+                  // IconButton(
+                  //   icon: Icon(Icons.mode_comment_outlined, size: 30),
+                  //   onPressed: () {
+                  //     Navigator.push(
+                  //       context,
+                  //       MaterialPageRoute(
+                  //         builder: (context) => ProductCommentsScreen(
+                  //           productId: widget.productId,
+                  //         ),
+                  //       ),
+                  //     );
+                  //   },
+                  // ),
                   SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: () async {
